@@ -119,6 +119,7 @@ create table food_entries (
   carbs_g numeric(6,2),
   fat_g numeric(6,2),
   off_code text, -- code produit Open Food Facts, null si saisie manuelle
+  meal text check (meal in ('petit_dejeuner', 'collation_matin', 'dejeuner', 'collation_apresmidi', 'diner')),
   created_at timestamptz default now()
 );
 

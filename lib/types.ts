@@ -57,6 +57,8 @@ export interface SleepEntry {
   created_at: string;
 }
 
+export type Meal = 'petit_dejeuner' | 'collation_matin' | 'dejeuner' | 'collation_apresmidi' | 'diner';
+
 export interface FoodEntry {
   id: string;
   date: string;
@@ -67,6 +69,7 @@ export interface FoodEntry {
   carbs_g: number | null;
   fat_g: number | null;
   off_code: string | null;
+  meal: Meal | null;
   created_at: string;
 }
 
