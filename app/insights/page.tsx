@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { CloudRain, TrendingDown, TrendingUp, Moon, LucideIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 function weekStartISO(dateStr: string) {
@@ -12,7 +13,7 @@ function weekStartISO(dateStr: string) {
 }
 
 interface Insight {
-  emoji: string;
+  icon: LucideIcon;
   text: string;
 }
 
@@ -40,7 +41,7 @@ export default function InsightsPage() {
         const diff = Math.round(rainAvg - otherAvg);
         if (Math.abs(diff) >= 3) {
           found.push({
-            emoji: '🌧️',
+            icon: CloudRain,
             text: diff > 0
               ? `Tes runs sous la pluie sont ${diff}s/km plus lents en moyenne que le reste (sur ${rainRuns.length} sortie${rainRuns.length > 1 ? 's' : ''}).`
               : `Tes runs sous la pluie sont ${Math.abs(diff)}s/km plus rapides en moyenne que le reste — la pluie ne te ralentit pas.`,
@@ -62,12 +63,12 @@ export default function InsightsPage() {
         if (lastThree[0] > lastThree[1] && lastThree[1] > lastThree[2]) {
           const dropPct = Math.round(((lastThree[0] - lastThree[2]) / lastThree[0]) * 100);
           found.push({
-            emoji: '📉',
+            icon: TrendingDown,
             text: `Ton volume musculation baisse depuis 3 semaines (-${dropPct}% entre la première et la dernière) — signe possible de fatigue ou de baisse de motivation.`,
           });
         } else if (lastThree[0] < lastThree[1] && lastThree[1] < lastThree[2]) {
           found.push({
-            emoji: '📈',
+            icon: TrendingUp,
             text: `Ton volume musculation augmente depuis 3 semaines d'affilée — belle progression continue.`,
           });
         }
@@ -94,7 +95,7 @@ export default function InsightsPage() {
         const diffPct = Math.round(((avgWell - avgUnder) / avgUnder) * 100);
         if (Math.abs(diffPct) >= 8) {
           found.push({
-            emoji: '😴',
+            icon: Moon,
             text: diffPct > 0
               ? `Tes séances après une nuit de 7h+ ont un volume ${diffPct}% plus élevé en moyenne que celles après une nuit plus courte.`
               : `Tes séances après une nuit courte (<7h) ont un volume ${Math.abs(diffPct)}% plus élevé en moyenne — à prendre avec précaution, la corrélation n'est pas forcément la cause.`,
@@ -132,7 +133,7 @@ export default function InsightsPage() {
         <div className="space-y-3">
           {insights.map((insight, i) => (
             <div key={i} className="card flex gap-3 items-start">
-              <span className="text-2xl">{insight.emoji}</span>
+              <insight.icon className="text-accent shrink-0 mt-0.5" size={22} />
               <span className="text-sm">{insight.text}</span>
             </div>
           ))}

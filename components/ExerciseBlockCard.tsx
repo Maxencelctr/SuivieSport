@@ -184,7 +184,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
               <div className="flex gap-2">
                 <button
                   onClick={() => applySuggestion('weight')}
-                  className="flex-1 text-xs py-1.5 rounded bg-accent text-black font-semibold"
+                  className="flex-1 text-xs py-1.5 rounded bg-accent text-white font-semibold"
                 >
                   +2.5kg → {Math.round((suggestion.weight + 2.5) * 2) / 2}kg x{suggestion.reps}
                 </button>

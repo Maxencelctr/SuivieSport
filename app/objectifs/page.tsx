@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Footprints, Dumbbell, Pencil, CheckCircle2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Exercise, Goal, GoalType, Run } from '@/lib/types';
 import { RACE_DISTANCE_PRESETS, formatPace } from '@/lib/running';
@@ -234,16 +235,16 @@ export default function ObjectifsPage() {
         <label className="text-sm text-neutral-400">Nouvel objectif</label>
         <div className="flex gap-2">
           {([
-            { key: 'course', label: '🏃 Course' },
-            { key: 'musculation', label: '🏋️ Musculation' },
-            { key: 'generique', label: '✏️ Autre' },
-          ] as { key: GoalType; label: string }[]).map((t) => (
+            { key: 'course', label: 'Course', icon: Footprints },
+            { key: 'musculation', label: 'Musculation', icon: Dumbbell },
+            { key: 'generique', label: 'Autre', icon: Pencil },
+          ] as { key: GoalType; label: string; icon: typeof Footprints }[]).map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex-1 text-sm py-2 rounded-lg ${tab === t.key ? 'bg-accent text-black font-semibold' : 'border border-[#333] text-neutral-400'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 text-sm py-2 rounded-lg ${tab === t.key ? 'bg-accent text-white font-semibold' : 'border border-[#2a2632] text-neutral-400'}`}
             >
-              {t.label}
+              <t.icon size={16} /> {t.label}
             </button>
           ))}
         </div>
@@ -257,14 +258,14 @@ export default function ObjectifsPage() {
                   <button
                     key={p.key}
                     onClick={() => setDistancePreset(p.key)}
-                    className={`text-sm px-3 py-1.5 rounded-lg ${distancePreset === p.key ? 'bg-accent text-black font-semibold' : 'border border-[#333] text-neutral-300'}`}
+                    className={`text-sm px-3 py-1.5 rounded-lg ${distancePreset === p.key ? 'bg-accent text-white font-semibold' : 'border border-[#333] text-neutral-300'}`}
                   >
                     {p.label}
                   </button>
                 ))}
                 <button
                   onClick={() => setDistancePreset('custom')}
-                  className={`text-sm px-3 py-1.5 rounded-lg ${distancePreset === 'custom' ? 'bg-accent text-black font-semibold' : 'border border-[#333] text-neutral-300'}`}
+                  className={`text-sm px-3 py-1.5 rounded-lg ${distancePreset === 'custom' ? 'bg-accent text-white font-semibold' : 'border border-[#333] text-neutral-300'}`}
                 >
                   Autre
                 </button>
@@ -418,12 +419,17 @@ export default function ObjectifsPage() {
               return (
                 <div key={g.id} className="card space-y-2">
                   <div className="flex justify-between items-center">
-                    <div className="font-medium">🏃 {g.title}{g.distance_km ? ` (${g.distance_km}km)` : ''}</div>
-                    <button onClick={() => deleteGoal(g.id)} className="text-neutral-500 text-sm">✕</button>
+                    <div className="font-medium flex items-center gap-2">
+                      <Footprints size={16} className="text-neutral-500" /> {g.title}
+                      {g.distance_km ? ` (${g.distance_km}km)` : ''}
+                    </div>
+                    <button onClick={() => deleteGoal(g.id)} className="text-neutral-500 text-sm">
+                      <X size={16} />
+                    </button>
                   </div>
                   {g.target_date && <DateBadge targetDate={g.target_date} />}
                   <div className="h-3 rounded-full bg-[#262626] overflow-hidden">
-                    <div className={`h-full transition-all ${achieved ? 'bg-accent' : 'bg-pink-500'}`} style={{ width: `${progress}%` }} />
+                    <div className={`h-full transition-all ${achieved ? 'bg-volt' : 'bg-pink-500'}`} style={{ width: `${progress}%` }} />
                   </div>
                   <div className="flex justify-between items-center text-sm text-neutral-400">
                     <span>Objectif : {formatDuration(g.target_value)}</span>
@@ -431,8 +437,9 @@ export default function ObjectifsPage() {
                   </div>
                   <div className="text-xs">
                     {best ? (
-                      <span className={achieved ? 'text-accent' : 'text-neutral-400'}>
-                        {achieved ? '✅ Objectif atteint' : 'Meilleure perf actuelle'} : ~{formatDuration(best.seconds)} (
+                      <span className={`flex items-center gap-1 ${achieved ? 'text-volt' : 'text-neutral-400'}`}>
+                        {achieved && <CheckCircle2 size={14} />} {achieved ? 'Objectif atteint' : 'Meilleure perf actuelle'} : ~
+                        {formatDuration(best.seconds)} (
                         {new Date(best.date).toLocaleDateString('fr-FR')})
                       </span>
                     ) : (
@@ -450,12 +457,16 @@ export default function ObjectifsPage() {
               return (
                 <div key={g.id} className="card space-y-2">
                   <div className="flex justify-between items-center">
-                    <div className="font-medium">🏋️ {g.title}</div>
-                    <button onClick={() => deleteGoal(g.id)} className="text-neutral-500 text-sm">✕</button>
+                    <div className="font-medium flex items-center gap-2">
+                      <Dumbbell size={16} className="text-neutral-500" /> {g.title}
+                    </div>
+                    <button onClick={() => deleteGoal(g.id)} className="text-neutral-500 text-sm">
+                      <X size={16} />
+                    </button>
                   </div>
                   {g.target_date && <DateBadge targetDate={g.target_date} />}
                   <div className="h-3 rounded-full bg-[#262626] overflow-hidden">
-                    <div className={`h-full transition-all ${achieved ? 'bg-accent' : 'bg-green-600'}`} style={{ width: `${progress}%` }} />
+                    <div className={`h-full transition-all ${achieved ? 'bg-volt' : 'bg-accent'}`} style={{ width: `${progress}%` }} />
                   </div>
                   <div className="flex justify-between items-center text-sm text-neutral-400">
                     <span>Objectif : {g.target_reps} reps à {g.target_value}kg</span>
@@ -463,8 +474,8 @@ export default function ObjectifsPage() {
                   </div>
                   <div className="text-xs">
                     {bestWeight ? (
-                      <span className={achieved ? 'text-accent' : 'text-neutral-400'}>
-                        {achieved ? '✅ Objectif atteint' : 'Meilleure perf actuelle'} : {bestWeight}kg à {g.target_reps}+ reps
+                      <span className={`flex items-center gap-1 ${achieved ? 'text-volt' : 'text-neutral-400'}`}>
+                        {achieved && <CheckCircle2 size={14} />} {achieved ? 'Objectif atteint' : 'Meilleure perf actuelle'} : {bestWeight}kg à {g.target_reps}+ reps
                       </span>
                     ) : (
                       <span className="text-neutral-500">Aucune série à {g.target_reps}+ reps enregistrée pour l'instant.</span>
@@ -479,7 +490,9 @@ export default function ObjectifsPage() {
               <div key={g.id} className="card space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="font-medium">{g.title}</div>
-                  <button onClick={() => deleteGoal(g.id)} className="text-neutral-500 text-sm">✕</button>
+                  <button onClick={() => deleteGoal(g.id)} className="text-neutral-500 text-sm">
+                    <X size={16} />
+                  </button>
                 </div>
                 {g.target_date && <DateBadge targetDate={g.target_date} />}
                 <div className="h-3 rounded-full bg-[#262626] overflow-hidden">

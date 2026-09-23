@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { RUN_TYPE_LABELS, formatPace } from '@/lib/running';
+import { RUN_TYPE_LABELS, WEATHER_LABELS, WEATHER_ICONS, formatPace } from '@/lib/running';
 
 export default function NouveauRunPage() {
   const router = useRouter();
@@ -81,13 +81,22 @@ export default function NouveauRunPage() {
         </div>
         <div>
           <label className="text-xs text-neutral-500">Météo (optionnel)</label>
-          <select value={weather} onChange={(e) => setWeather(e.target.value)}>
-            <option value="">Non renseignée</option>
-            <option value="soleil">☀️ Soleil</option>
-            <option value="pluie">🌧️ Pluie</option>
-            <option value="froid">🥶 Froid</option>
-            <option value="chaud">🥵 Chaud</option>
-          </select>
+          <div className="flex gap-2 flex-wrap mt-1">
+            {Object.entries(WEATHER_LABELS).map(([key, label]) => {
+              const Icon = WEATHER_ICONS[key];
+              const active = weather === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setWeather(active ? '' : key)}
+                  className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg ${active ? 'bg-accent text-white font-semibold' : 'border border-[#2a2632] text-neutral-300'}`}
+                >
+                  <Icon size={16} /> {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

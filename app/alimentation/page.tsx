@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Pill, Droplet, Check, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { FoodEntry, Profile, CustomFood, WaterEntry, Supplement, SupplementLog } from '@/lib/types';
 import { computeBMR, computeTDEE, computeCalorieTarget, computeProteinTarget, computeMacroTargets } from '@/lib/nutrition';
@@ -438,7 +439,9 @@ export default function AlimentationPage() {
       )}
 
       <div className="card space-y-2">
-        <div className="text-sm text-neutral-400">💊 Suppléments</div>
+        <div className="text-sm text-neutral-400 flex items-center gap-1.5">
+          <Pill size={14} /> Suppléments
+        </div>
         <div className="space-y-1">
           {supplements.map((s) => {
             const taken = supplementLogs.some((l) => l.supplement_name === s.name);
@@ -446,9 +449,9 @@ export default function AlimentationPage() {
               <button key={s.name} onClick={() => toggleSupplement(s.name)} className="w-full flex items-center justify-between py-1.5">
                 <span className={taken ? 'text-neutral-200' : 'text-neutral-500'}>{s.name}</span>
                 <span
-                  className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${taken ? 'bg-accent border-accent text-black' : 'border-[#333]'}`}
+                  className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${taken ? 'bg-accent border-accent text-white' : 'border-[#333]'}`}
                 >
-                  {taken ? '✓' : ''}
+                  {taken && <Check size={12} />}
                 </span>
               </button>
             );
@@ -469,7 +472,9 @@ export default function AlimentationPage() {
 
       <div className="card space-y-3">
         <div className="flex justify-between items-center">
-          <div className="text-sm text-neutral-400">💧 Hydratation</div>
+          <div className="text-sm text-neutral-400 flex items-center gap-1.5">
+            <Droplet size={14} /> Hydratation
+          </div>
           <div className="text-lg font-bold text-blue-400">{(totalWater / 1000).toFixed(2).replace(/\.?0+$/, '')}L</div>
         </div>
         <div className="flex gap-2">
@@ -479,7 +484,7 @@ export default function AlimentationPage() {
         </div>
         <div className="flex gap-2 items-center">
           <input type="number" value={customWater} onChange={(e) => setCustomWater(Number(e.target.value))} min={0} step={50} className="flex-1" />
-          <button onClick={() => addWater(customWater)} className="px-3 py-1.5 rounded bg-accent text-black text-sm font-semibold">+ Ajouter</button>
+          <button onClick={() => addWater(customWater)} className="px-3 py-1.5 rounded bg-accent text-white text-sm font-semibold">+ Ajouter</button>
         </div>
         {waterEntries.length > 0 && (
           <div className="flex flex-wrap gap-1 pt-1">

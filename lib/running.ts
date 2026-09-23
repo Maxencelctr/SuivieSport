@@ -49,6 +49,15 @@ export function formatPace(secondsPerKm: number): string {
   return `${min}:${sec.toString().padStart(2, '0')}`;
 }
 
+import { Sun, CloudRain, Snowflake, Flame } from 'lucide-react';
+
+export const WEATHER_ICONS: Record<string, typeof Sun> = {
+  soleil: Sun,
+  pluie: CloudRain,
+  froid: Snowflake,
+  chaud: Flame,
+};
+
 // Distances de course classiques, pour les objectifs "course" (matching avec
 // les runs enregistrés à une distance proche) et la sélection de test VMA.
 export const RACE_DISTANCE_PRESETS: { key: string; label: string; km: number }[] = [
@@ -57,6 +66,13 @@ export const RACE_DISTANCE_PRESETS: { key: string; label: string; km: number }[]
   { key: 'semi', label: 'Semi-marathon', km: 21.1 },
   { key: 'marathon', label: 'Marathon', km: 42.195 },
 ];
+
+export const WEATHER_LABELS: Record<string, string> = {
+  soleil: 'Soleil',
+  pluie: 'Pluie',
+  froid: 'Froid',
+  chaud: 'Chaud',
+};
 
 export const RUN_TYPE_LABELS: Record<string, string> = {
   footing: 'Footing',

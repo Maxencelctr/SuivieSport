@@ -68,7 +68,7 @@ export default function CalendrierPage() {
       <div className="flex gap-4 text-xs text-neutral-400 justify-center">
         <span><span className="inline-block w-3 h-3 rounded-sm bg-accent align-middle mr-1"></span>Muscu</span>
         <span><span className="inline-block w-3 h-3 rounded-sm bg-pink-500 align-middle mr-1"></span>Course</span>
-        <span><span className="inline-block w-3 h-3 rounded-sm align-middle mr-1" style={{ background: 'linear-gradient(135deg, #22c55e 50%, #ec4899 50%)' }}></span>Les deux</span>
+        <span><span className="inline-block w-3 h-3 rounded-sm align-middle mr-1" style={{ background: 'linear-gradient(135deg, #8B5CF6 50%, #ec4899 50%)' }}></span>Les deux</span>
       </div>
 
       {loading ? (
@@ -84,8 +84,8 @@ export default function CalendrierPage() {
             const hasMuscu = muscuDates.has(iso);
             const hasRun = runDates.has(iso);
             let bg = '#171717';
-            if (hasMuscu && hasRun) bg = 'linear-gradient(135deg, #22c55e 50%, #ec4899 50%)';
-            else if (hasMuscu) bg = '#22c55e';
+            if (hasMuscu && hasRun) bg = 'linear-gradient(135deg, #8B5CF6 50%, #ec4899 50%)';
+            else if (hasMuscu) bg = '#8B5CF6';
             else if (hasRun) bg = '#ec4899';
 
             const isToday = iso === toISO(now.getFullYear(), now.getMonth(), now.getDate());

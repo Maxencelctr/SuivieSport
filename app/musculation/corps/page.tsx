@@ -91,7 +91,7 @@ export default function CorpsPage() {
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`px-3 py-1 rounded-full ${period === p ? 'bg-accent text-black font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
+            className={`px-3 py-1 rounded-full ${period === p ? 'bg-accent text-white font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
           >
             {p === '30j' ? '30 derniers jours' : 'Tout le temps'}
           </button>
@@ -101,13 +101,13 @@ export default function CorpsPage() {
       <div className="flex gap-2 justify-center text-xs">
         <button
           onClick={() => setStyle('wger')}
-          className={`px-3 py-1 rounded-full ${style === 'wger' ? 'bg-accent text-black font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
+          className={`px-3 py-1 rounded-full ${style === 'wger' ? 'bg-accent text-white font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
         >
           Illustrations anatomiques
         </button>
         <button
           onClick={() => setStyle('schema')}
-          className={`px-3 py-1 rounded-full ${style === 'schema' ? 'bg-accent text-black font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
+          className={`px-3 py-1 rounded-full ${style === 'schema' ? 'bg-accent text-white font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
         >
           Dessin schématique
         </button>

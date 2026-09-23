@@ -71,8 +71,8 @@ export default function BilanPage() {
                   className="aspect-square rounded flex items-center justify-center text-xs"
                   style={{
                     background: hasMuscu && dayRuns.length > 0
-                      ? 'linear-gradient(135deg, #22c55e 50%, #ec4899 50%)'
-                      : hasMuscu ? '#22c55e' : dayRuns.length > 0 ? '#ec4899' : '#171717',
+                      ? 'linear-gradient(135deg, #8B5CF6 50%, #ec4899 50%)'
+                      : hasMuscu ? '#8B5CF6' : dayRuns.length > 0 ? '#ec4899' : '#171717',
                   }}
                 >
                   {new Date(d).getDate()}

@@ -199,7 +199,7 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
             <button
               key={n}
               onClick={() => setFeeling(n)}
-              className={`flex-1 py-1.5 rounded text-sm ${feeling === n ? 'bg-accent text-black font-semibold' : 'border border-[#333] text-neutral-400'}`}
+              className={`flex-1 py-1.5 rounded text-sm ${feeling === n ? 'bg-accent text-white font-semibold' : 'border border-[#333] text-neutral-400'}`}
             >
               {n}
             </button>

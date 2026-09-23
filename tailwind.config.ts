@@ -5,7 +5,12 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        accent: '#22c55e',
+        // Violet = couleur principale (boutons, liens, états actifs, progression)
+        accent: '#8B5CF6',
+        'accent-dark': '#7C3AED',
+        'accent-light': '#A78BFA',
+        // Vert lime = accent ponctuel (records, succès, moments à mettre en avant)
+        volt: '#A3E635',
       },
     },
   },

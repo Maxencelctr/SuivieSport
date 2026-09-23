@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Run } from '@/lib/types';
-import { RUN_TYPE_LABELS } from '@/lib/running';
-
-const WEATHER_ICONS: Record<string, string> = { soleil: '☀️', pluie: '🌧️', froid: '🥶', chaud: '🥵' };
+import { RUN_TYPE_LABELS, WEATHER_ICONS } from '@/lib/running';
 
 function formatPace(secondsPerKm: number) {
   const min = Math.floor(secondsPerKm / 60);
@@ -60,7 +58,10 @@ export default function CoursePage() {
             <div className="flex justify-between items-center">
               <span className="font-medium">{new Date(r.date).toLocaleDateString('fr-FR')}</span>
               <span className="text-xs text-neutral-500 bg-[#0a0a0a] border border-[#262626] rounded-full px-2 py-0.5">{RUN_TYPE_LABELS[r.run_type] ?? r.run_type}</span>
-              <span className="text-accent">{r.weather ? `${WEATHER_ICONS[r.weather]} ` : ''}{formatPace(r.avg_pace_seconds_per_km)} /km</span>
+              <span className="text-accent flex items-center gap-1">
+                {r.weather && WEATHER_ICONS[r.weather] && (() => { const WIcon = WEATHER_ICONS[r.weather]; return <WIcon size={14} />; })()}
+                {formatPace(r.avg_pace_seconds_per_km)} /km
+              </span>
             </div>
             <div className="flex justify-between items-center text-sm text-neutral-400 mt-1">
               <span>{r.distance_km} km — {formatDuration(r.duration_seconds)}{r.elevation_gain_m ? ` — D+${r.elevation_gain_m}m` : ''}{r.feeling ? ` — ${r.feeling}` : ''}</span>

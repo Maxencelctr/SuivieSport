@@ -6,8 +6,9 @@ import {
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { Run, StrengthSet, Exercise, FoodEntry, WaterEntry, Supplement, SupplementLog } from '@/lib/types';
-import { RUN_TYPE_LABELS, formatPace } from '@/lib/running';
+import { RUN_TYPE_LABELS, WEATHER_LABELS, WEATHER_ICONS, formatPace } from '@/lib/running';
 import { MEAL_ORDER, MEAL_LABELS } from '@/lib/meals';
+import { Footprints, Dumbbell, Utensils } from 'lucide-react';
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
@@ -112,10 +113,9 @@ export default function StatsPage() {
       byWeather[r.weather].totalPace += r.avg_pace_seconds_per_km;
       byWeather[r.weather].count += 1;
     });
-    const labels: Record<string, string> = { soleil: '☀️ Soleil', pluie: '🌧️ Pluie', froid: '🥶 Froid', chaud: '🥵 Chaud' };
     return Object.entries(byWeather).map(([weather, { totalPace, count }]) => ({
       weather,
-      label: labels[weather] ?? weather,
+      label: WEATHER_LABELS[weather] ?? weather,
       avgPace: Math.round(totalPace / count),
       count,
     }));
@@ -193,7 +193,7 @@ export default function StatsPage() {
     const sum = proteinKcal + carbsKcal + fatKcal;
     if (sum === 0) return [];
     return [
-      { name: 'Protéines', value: Math.round((proteinKcal / sum) * 100), color: '#22c55e' },
+      { name: 'Protéines', value: Math.round((proteinKcal / sum) * 100), color: '#8B5CF6' },
       { name: 'Glucides', value: Math.round((carbsKcal / sum) * 100), color: '#3b82f6' },
       { name: 'Lipides', value: Math.round((fatKcal / sum) * 100), color: '#ec4899' },
     ];
@@ -245,7 +245,9 @@ export default function StatsPage() {
       <h2 className="text-lg font-semibold">Statistiques</h2>
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">🏃 Course</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-400 uppercase tracking-wide">
+          <Footprints size={16} /> Course
+        </h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="card">
             <div className="font-medium mb-3">Distance par sortie (km)</div>
@@ -299,12 +301,17 @@ export default function StatsPage() {
             <div className="card">
               <div className="font-medium mb-3">Allure moyenne par météo</div>
               <div className="space-y-2">
-                {paceByWeather.map((w) => (
-                  <div key={w.weather} className="flex justify-between items-center text-sm">
-                    <span>{w.label} <span className="text-neutral-500 text-xs">({w.count})</span></span>
-                    <span className="text-pink-500">{formatPace(w.avgPace)} /km</span>
-                  </div>
-                ))}
+                {paceByWeather.map((w) => {
+                  const WIcon = WEATHER_ICONS[w.weather];
+                  return (
+                    <div key={w.weather} className="flex justify-between items-center text-sm">
+                      <span className="flex items-center gap-1.5">
+                        {WIcon && <WIcon size={14} />} {w.label} <span className="text-neutral-500 text-xs">({w.count})</span>
+                      </span>
+                      <span className="text-pink-500">{formatPace(w.avgPace)} /km</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -312,7 +319,9 @@ export default function StatsPage() {
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">🏋️ Musculation</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-400 uppercase tracking-wide">
+          <Dumbbell size={16} /> Musculation
+        </h3>
         <div className="grid md:grid-cols-2 gap-4 items-start">
           <div className="card">
             <div className="flex justify-between items-center mb-3">
@@ -332,7 +341,7 @@ export default function StatsPage() {
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} unit="kg" />
                   <Tooltip contentStyle={tooltipStyle} cursor={lineCursor} formatter={(v: number) => [`${v} kg`, 'Poids max']} />
-                  <Line type="monotone" dataKey="poids" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="poids" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -352,7 +361,7 @@ export default function StatsPage() {
                   <XAxis type="number" {...chartProps} unit="kg" />
                   <YAxis type="category" dataKey="group" {...chartProps} width={80} />
                   <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} kg`, 'Charge totale']} />
-                  <Bar dataKey="volume" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="volume" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -361,7 +370,9 @@ export default function StatsPage() {
       </section>
 
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">🍗 Nutrition</h3>
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-400 uppercase tracking-wide">
+          <Utensils size={16} /> Nutrition
+        </h3>
         <div className="grid md:grid-cols-2 gap-4 items-start">
           <div className="card">
             <div className="font-medium mb-3">Protéines & calories par jour (30j)</div>

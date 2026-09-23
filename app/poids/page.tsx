@@ -124,7 +124,7 @@ export default function PoidsPage() {
                 cursor={{ stroke: '#404040' }}
                 formatter={(v: number) => [`${v} kg`, 'Poids']}
               />
-              <Line type="monotone" dataKey="poids" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="poids" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         )}

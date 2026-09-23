@@ -1,3 +1,4 @@
+import { Croissant, Apple, UtensilsCrossed, Cookie, Moon } from 'lucide-react';
 import { Meal } from './types';
 
 export const MEAL_ORDER: Meal[] = ['petit_dejeuner', 'collation_matin', 'dejeuner', 'collation_apresmidi', 'diner'];
@@ -10,12 +11,12 @@ export const MEAL_LABELS: Record<Meal, string> = {
   diner: 'Dîner',
 };
 
-export const MEAL_EMOJIS: Record<Meal, string> = {
-  petit_dejeuner: '🥐',
-  collation_matin: '🍎',
-  dejeuner: '🍽️',
-  collation_apresmidi: '🥜',
-  diner: '🌙',
+export const MEAL_ICONS: Record<Meal, typeof Croissant> = {
+  petit_dejeuner: Croissant,
+  collation_matin: Apple,
+  dejeuner: UtensilsCrossed,
+  collation_apresmidi: Cookie,
+  diner: Moon,
 };
 
 // Devine le repas le plus probable selon l'heure actuelle, pour pré-remplir

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CustomFood, FoodEntry, Meal } from '@/lib/types';
-import { MEAL_EMOJIS, MEAL_LABELS } from '@/lib/meals';
+import { MEAL_ICONS, MEAL_LABELS } from '@/lib/meals';
 import FoodPicker from './FoodPicker';
 
 interface MealSectionProps {
@@ -16,6 +16,7 @@ interface MealSectionProps {
 
 export default function MealSection({ meal, date, entries, customFoods, onChange }: MealSectionProps) {
   const [adding, setAdding] = useState(false);
+  const MealIcon = MEAL_ICONS[meal];
 
   const protein = entries.reduce((s, e) => s + Number(e.protein_g), 0);
   const calories = entries.reduce((s, e) => s + (e.calories_kcal ? Number(e.calories_kcal) : 0), 0);
@@ -29,7 +30,7 @@ export default function MealSection({ meal, date, entries, customFoods, onChange
     <div className="card space-y-2">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <span>{MEAL_EMOJIS[meal]}</span>
+          <MealIcon size={16} className="text-accent" />
           <span className="font-medium text-sm">{MEAL_LABELS[meal]}</span>
         </div>
         {entries.length > 0 && (

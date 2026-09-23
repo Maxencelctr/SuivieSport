@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Zap, Footprints, Utensils, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { guessCurrentMeal } from '@/lib/meals';
 
@@ -47,11 +48,17 @@ export default function QuickAdd({ onSaved }: { onSaved?: () => void }) {
     return (
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => setMode('run')} className="card text-center hover:border-accent transition">
-          <div className="text-2xl mb-1">⚡🏃</div>
+          <div className="flex justify-center items-center gap-1 mb-1.5 text-accent">
+            <Zap size={20} />
+            <Footprints size={20} />
+          </div>
           <div className="text-sm font-semibold">Run rapide</div>
         </button>
         <button onClick={() => setMode('repas')} className="card text-center hover:border-accent transition">
-          <div className="text-2xl mb-1">⚡🍗</div>
+          <div className="flex justify-center items-center gap-1 mb-1.5 text-accent">
+            <Zap size={20} />
+            <Utensils size={20} />
+          </div>
           <div className="text-sm font-semibold">Repas rapide</div>
         </button>
       </div>

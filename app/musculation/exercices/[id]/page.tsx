@@ -197,7 +197,7 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
                 <div className="flex gap-1">
                   <button
                     onClick={() => toggleMuscle(m.id, 'primaire')}
-                    className={`text-xs px-1.5 py-0.5 rounded ${isPrimary ? 'bg-accent text-black' : 'text-neutral-600 border border-[#333]'}`}
+                    className={`text-xs px-1.5 py-0.5 rounded ${isPrimary ? 'bg-accent text-white' : 'text-neutral-600 border border-[#333]'}`}
                   >
                     P
                   </button>

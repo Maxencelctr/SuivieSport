@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PartyPopper, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Exercise } from '@/lib/types';
 import ExerciseBlockCard, { ExerciseBlockHandle } from '@/components/ExerciseBlockCard';
@@ -150,14 +151,14 @@ export default function NouvelleSeancePage() {
   if (prList) {
     return (
       <div className="space-y-6 text-center pt-8">
-        <div className="text-5xl">🎉</div>
-        <h2 className="text-xl font-bold text-accent">
+        <PartyPopper className="mx-auto text-volt" size={48} />
+        <h2 className="text-xl font-bold text-volt">
           Nouveau{prList.length > 1 ? 'x' : ''} record{prList.length > 1 ? 's' : ''} !
         </h2>
         <div className="card space-y-2 text-left">
           {prList.map((pr, i) => (
-            <div key={i} className="text-sm">
-              🏆 {pr}
+            <div key={i} className="text-sm flex items-center gap-2">
+              <Trophy size={16} className="text-volt shrink-0" /> {pr}
             </div>
           ))}
         </div>
@@ -216,7 +217,7 @@ export default function NouvelleSeancePage() {
             <button
               key={n}
               onClick={() => setFeeling(n)}
-              className={`flex-1 py-2 rounded text-sm ${feeling === n ? 'bg-accent text-black font-semibold' : 'border border-[#333] text-neutral-400'}`}
+              className={`flex-1 py-2 rounded text-sm ${feeling === n ? 'bg-accent text-white font-semibold' : 'border border-[#333] text-neutral-400'}`}
             >
               {n}
             </button>

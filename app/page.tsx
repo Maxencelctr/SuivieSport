@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Settings, Dumbbell, Footprints, Utensils, Target, Angry, Frown, Meh, Smile, Laugh } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { StrengthSession, Run } from '@/lib/types';
 import { RUN_TYPE_LABELS } from '@/lib/running';
 import Resume from '@/components/Resume';
 import QuickAdd from '@/components/QuickAdd';
 
-const FEELING_EMOJIS: Record<number, string> = { 1: '😫', 2: '😕', 3: '😐', 4: '🙂', 5: '😄' };
+const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
+  1: { icon: Angry, className: 'text-red-500' },
+  2: { icon: Frown, className: 'text-orange-500' },
+  3: { icon: Meh, className: 'text-neutral-400' },
+  4: { icon: Smile, className: 'text-accent-light' },
+  5: { icon: Laugh, className: 'text-volt' },
+};
 
 export default function HomePage() {
   const [sessions, setSessions] = useState<StrengthSession[]>([]);
@@ -47,7 +54,9 @@ export default function HomePage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Link href="/parametres" className="text-sm text-neutral-400">⚙️ Paramètres</Link>
+        <Link href="/parametres" className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200">
+          <Settings size={16} /> Paramètres
+        </Link>
         <div className="flex gap-3">
           <Link href="/insights" className="text-sm text-accent">Insights</Link>
           <Link href="/bilan" className="text-sm text-accent">Bilan →</Link>
@@ -61,19 +70,19 @@ export default function HomePage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Link href="/musculation/nouvelle" className="card text-center hover:border-accent transition">
-          <div className="text-3xl mb-1">🏋️</div>
+          <Dumbbell className="mx-auto mb-1.5 text-accent" size={26} />
           <div className="font-semibold text-sm">Nouvelle séance</div>
         </Link>
         <Link href="/course/nouvelle" className="card text-center hover:border-accent transition">
-          <div className="text-3xl mb-1">🏃</div>
+          <Footprints className="mx-auto mb-1.5 text-accent" size={26} />
           <div className="font-semibold text-sm">Nouveau run</div>
         </Link>
         <Link href="/alimentation" className="card text-center hover:border-accent transition">
-          <div className="text-3xl mb-1">🍗</div>
+          <Utensils className="mx-auto mb-1.5 text-accent" size={26} />
           <div className="font-semibold text-sm">Alimentation</div>
         </Link>
         <Link href="/objectifs" className="card text-center hover:border-accent transition">
-          <div className="text-3xl mb-1">🎯</div>
+          <Target className="mx-auto mb-1.5 text-accent" size={26} />
           <div className="font-semibold text-sm">Objectifs</div>
         </Link>
       </div>
@@ -98,7 +107,11 @@ export default function HomePage() {
                         {new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
                         {s.time && <span className="text-neutral-500 font-normal"> · {s.time.slice(0, 5)}</span>}
                       </span>
-                      {s.feeling && <span>{FEELING_EMOJIS[s.feeling]}</span>}
+                      {s.feeling &&
+                        (() => {
+                          const F = FEELING_ICONS[s.feeling];
+                          return <F.icon size={18} className={F.className} />;
+                        })()}
                     </div>
                     <div className="text-xs text-neutral-500 mt-1">
                       {stats ? `${stats.exercises} exercice${stats.exercises > 1 ? 's' : ''} · ${stats.sets} série${stats.sets > 1 ? 's' : ''}` : '—'}
