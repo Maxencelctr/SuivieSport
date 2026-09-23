@@ -1,0 +1,287 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
+import { supabase } from '@/lib/supabase';
+import { Run, StrengthSet, Exercise, FoodEntry } from '@/lib/types';
+import { RUN_TYPE_LABELS, formatPace } from '@/lib/running';
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+}
+
+// Renvoie la date (ISO) du lundi de la semaine contenant `dateStr`
+function weekStartISO(dateStr: string) {
+  const d = new Date(dateStr);
+  const day = (d.getDay() + 6) % 7; // 0 = lundi
+  d.setDate(d.getDate() - day);
+  return d.toISOString().slice(0, 10);
+}
+
+export default function StatsPage() {
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [sets, setSets] = useState<any[]>([]);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [foodEntries, setFoodEntries] = useState<FoodEntry[]>([]);
+  const [selectedExercise, setSelectedExercise] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const since = thirtyDaysAgo.toISOString().slice(0, 10);
+
+      const [{ data: runsData }, { data: setsData }, { data: exercisesData }, { data: foodData }] = await Promise.all([
+        supabase.from('runs').select('*').order('date'),
+        supabase.from('strength_sets').select('*, strength_sessions(date)').order('created_at'),
+        supabase.from('exercises').select('*').order('name'),
+        supabase.from('food_entries').select('*').gte('date', since).order('date'),
+      ]);
+      setRuns(runsData ?? []);
+      setSets((setsData as any) ?? []);
+      setExercises(exercisesData ?? []);
+      setFoodEntries(foodData ?? []);
+      if (exercisesData && exercisesData.length > 0) setSelectedExercise(exercisesData[0].id);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  // --- Course : distance par run ---
+  const distanceData = useMemo(
+    () => runs.map((r) => ({ date: fmtDate(r.date), distance: r.distance_km })),
+    [runs]
+  );
+
+  // --- Course : cumul km par semaine ---
+  const weeklyKmData = useMemo(() => {
+    const byWeek: Record<string, number> = {};
+    runs.forEach((r) => {
+      const w = weekStartISO(r.date);
+      byWeek[w] = (byWeek[w] || 0) + Number(r.distance_km);
+    });
+    return Object.entries(byWeek)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([week, km]) => ({ week: fmtDate(week), km: Math.round(km * 10) / 10 }));
+  }, [runs]);
+
+  // --- Course : allure moyenne par type de sortie ---
+  const paceByType = useMemo(() => {
+    const byType: Record<string, { totalPace: number; count: number }> = {};
+    runs.forEach((r) => {
+      const type = r.run_type ?? 'autre';
+      if (!byType[type]) byType[type] = { totalPace: 0, count: 0 };
+      byType[type].totalPace += r.avg_pace_seconds_per_km;
+      byType[type].count += 1;
+    });
+    return Object.entries(byType).map(([type, { totalPace, count }]) => ({
+      type,
+      label: RUN_TYPE_LABELS[type] ?? type,
+      avgPace: Math.round(totalPace / count),
+      count,
+    }));
+  }, [runs]);
+
+  // --- Course : allure moyenne par météo ---
+  const paceByWeather = useMemo(() => {
+    const byWeather: Record<string, { totalPace: number; count: number }> = {};
+    runs.forEach((r) => {
+      if (!r.weather) return;
+      if (!byWeather[r.weather]) byWeather[r.weather] = { totalPace: 0, count: 0 };
+      byWeather[r.weather].totalPace += r.avg_pace_seconds_per_km;
+      byWeather[r.weather].count += 1;
+    });
+    const labels: Record<string, string> = { soleil: '☀️ Soleil', pluie: '🌧️ Pluie', froid: '🥶 Froid', chaud: '🥵 Chaud' };
+    return Object.entries(byWeather).map(([weather, { totalPace, count }]) => ({
+      weather,
+      label: labels[weather] ?? weather,
+      avgPace: Math.round(totalPace / count),
+      count,
+    }));
+  }, [runs]);
+
+  // --- Muscu : progression poids max par exercice ---
+  const maxWeightData = useMemo(() => {
+    if (!selectedExercise) return [];
+    const bySession: Record<string, number> = {};
+    sets
+      .filter((s: any) => s.exercise_id === selectedExercise && s.strength_sessions?.date)
+      .forEach((s: any) => {
+        const date = s.strength_sessions.date;
+        bySession[date] = Math.max(bySession[date] || 0, Number(s.weight_kg));
+      });
+    return Object.entries(bySession)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, weight]) => ({ date: fmtDate(date), poids: weight }));
+  }, [sets, selectedExercise]);
+
+  // --- Muscu : répartition du volume par groupe musculaire ---
+  const muscleGroupData = useMemo(() => {
+    const exerciseGroup: Record<string, string> = {};
+    exercises.forEach((e) => { exerciseGroup[e.id] = e.muscle_group; });
+    const byGroup: Record<string, number> = {};
+    sets.forEach((s: any) => {
+      const group = exerciseGroup[s.exercise_id] ?? 'autre';
+      byGroup[group] = (byGroup[group] || 0) + s.reps * Number(s.weight_kg);
+    });
+    return Object.entries(byGroup)
+      .sort(([, a], [, b]) => b - a)
+      .map(([group, volume]) => ({ group, volume: Math.round(volume) }));
+  }, [sets, exercises]);
+
+  // --- Nutrition : protéines par jour (30 derniers jours) ---
+  const proteinData = useMemo(() => {
+    const byDay: Record<string, number> = {};
+    foodEntries.forEach((f) => {
+      byDay[f.date] = (byDay[f.date] || 0) + Number(f.protein_g);
+    });
+    return Object.entries(byDay)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, protein]) => ({ date: fmtDate(date), proteines: Math.round(protein) }));
+  }, [foodEntries]);
+
+  if (loading) return <p className="text-neutral-500">Chargement...</p>;
+
+  const chartProps = { stroke: '#888', fontSize: 12 };
+  const tooltipStyle = { backgroundColor: '#171717', border: '1px solid #262626' };
+
+  return (
+    <div className="space-y-8">
+      <h2 className="text-lg font-semibold">Statistiques</h2>
+
+      {/* Course : distance par run */}
+      <section className="card">
+        <div className="font-medium mb-3">Distance par sortie (km)</div>
+        {distanceData.length === 0 ? (
+          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={distanceData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+              <XAxis dataKey="date" {...chartProps} />
+              <YAxis {...chartProps} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="distance" fill="#ec4899" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </section>
+
+      {/* Course : cumul km/semaine */}
+      <section className="card">
+        <div className="font-medium mb-3">Kilomètres cumulés par semaine</div>
+        {weeklyKmData.length === 0 ? (
+          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={weeklyKmData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+              <XAxis dataKey="week" {...chartProps} />
+              <YAxis {...chartProps} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="km" fill="#ec4899" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </section>
+
+      {/* Course : allure moyenne par type de sortie */}
+      {paceByType.length > 0 && (
+        <section className="card">
+          <div className="font-medium mb-3">Allure moyenne par type de sortie</div>
+          <div className="space-y-2">
+            {paceByType.map((t) => (
+              <div key={t.type} className="flex justify-between items-center text-sm">
+                <span>{t.label} <span className="text-neutral-500 text-xs">({t.count})</span></span>
+                <span className="text-pink-500">{formatPace(t.avgPace)} /km</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Course : allure moyenne par météo */}
+      {paceByWeather.length > 1 && (
+        <section className="card">
+          <div className="font-medium mb-3">Allure moyenne par météo</div>
+          <div className="space-y-2">
+            {paceByWeather.map((w) => (
+              <div key={w.weather} className="flex justify-between items-center text-sm">
+                <span>{w.label} <span className="text-neutral-500 text-xs">({w.count})</span></span>
+                <span className="text-pink-500">{formatPace(w.avgPace)} /km</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Muscu : progression poids max par exercice */}
+      <section className="card">
+        <div className="flex justify-between items-center mb-3">
+          <div className="font-medium">Progression poids max</div>
+          <select
+            value={selectedExercise}
+            onChange={(e) => setSelectedExercise(e.target.value)}
+            className="w-auto text-sm"
+          >
+            {exercises.map((ex) => (
+              <option key={ex.id} value={ex.id}>{ex.name}</option>
+            ))}
+          </select>
+        </div>
+        {maxWeightData.length === 0 ? (
+          <p className="text-neutral-500 text-sm">Pas encore de séries enregistrées pour cet exercice.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={maxWeightData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+              <XAxis dataKey="date" {...chartProps} />
+              <YAxis {...chartProps} unit="kg" />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Line type="monotone" dataKey="poids" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </section>
+
+      {/* Muscu : répartition par groupe musculaire */}
+      <section className="card">
+        <div className="font-medium mb-3">Volume total par groupe musculaire (reps × poids, tout confondu)</div>
+        {muscleGroupData.length === 0 ? (
+          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={Math.max(200, muscleGroupData.length * 40)}>
+            <BarChart data={muscleGroupData} layout="vertical" margin={{ left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+              <XAxis type="number" {...chartProps} />
+              <YAxis type="category" dataKey="group" {...chartProps} width={80} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Bar dataKey="volume" fill="#22c55e" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </section>
+
+      {/* Nutrition : protéines sur 30 jours */}
+      <section className="card">
+        <div className="font-medium mb-3">Protéines par jour (30 derniers jours)</div>
+        {proteinData.length === 0 ? (
+          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={proteinData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+              <XAxis dataKey="date" {...chartProps} />
+              <YAxis {...chartProps} unit="g" />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Line type="monotone" dataKey="proteines" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </section>
+    </div>
+  );
+}
