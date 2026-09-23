@@ -21,6 +21,7 @@ function today() {
 export default function NouvelleSeancePage() {
   const router = useRouter();
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [muscleNamesByExercise, setMuscleNamesByExercise] = useState<Record<string, string[]>>({});
   const [blocks, setBlocks] = useState<{ key: string }[]>(() => [{ key: genKey() }, { key: genKey() }, { key: genKey() }]);
   const blockRefs = useRef<Record<string, ExerciseBlockHandle | null>>({});
 
@@ -40,6 +41,21 @@ export default function NouvelleSeancePage() {
       .select('*')
       .order('name')
       .then(({ data }) => setExercises(data ?? []));
+
+    // Muscles précis (noms FR) déjà connus par exercice, pour affichage dans la recherche
+    supabase
+      .from('exercise_muscles')
+      .select('exercise_id, muscles(name_fr)')
+      .eq('role', 'primaire')
+      .then(({ data }) => {
+        const map: Record<string, string[]> = {};
+        (data ?? []).forEach((row: any) => {
+          const name = row.muscles?.name_fr;
+          if (!name) return;
+          (map[row.exercise_id] ??= []).push(name);
+        });
+        setMuscleNamesByExercise(map);
+      });
   }, []);
 
   function addBlock() {
@@ -70,19 +86,19 @@ export default function NouvelleSeancePage() {
     setSaving(true);
 
     const countByKey: Record<string, number> = {};
-    const flatSets = results.flatMap((r) => {
-      const key = `${r.exercise.id}__${r.side ?? ''}`;
-      return r.sets.map((s) => {
+    const flatSets = results.flatMap((r) =>
+      r.sets.map((s) => {
+        const key = `${r.exercise.id}__${s.side ?? ''}`;
         countByKey[key] = (countByKey[key] ?? 0) + 1;
         return {
           exercise_id: r.exercise.id,
           set_number: countByKey[key],
           reps: s.reps,
           weight_kg: s.weight_kg,
-          side: r.side,
+          side: s.side,
         };
-      });
-    });
+      })
+    );
 
     // Détection de records : meilleur poids du jour vs meilleur poids déjà enregistré
     const exerciseIds = Array.from(new Set(flatSets.map((s) => s.exercise_id)));
@@ -179,6 +195,7 @@ export default function NouvelleSeancePage() {
           key={b.key}
           index={i}
           exercises={exercises}
+          muscleNamesByExercise={muscleNamesByExercise}
           onExerciseAdded={onExerciseAdded}
           onRemove={() => removeBlock(b.key)}
           removable={blocks.length > 1}

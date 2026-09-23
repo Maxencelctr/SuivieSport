@@ -29,6 +29,27 @@ const CATEGORY_TO_MUSCLE_GROUP: Record<string, string> = {
   Cardio: 'cardio',
 };
 
+// Même référentiel que les 15 muscles seedés dans supabase/schema.sql (id
+// wger -> nom FR), pour afficher le muscle précis plutôt que la seule
+// catégorie large ("jambes") dans les résultats de recherche.
+const WGER_MUSCLE_NAME_FR: Record<number, string> = {
+  1: 'Biceps',
+  2: 'Deltoïde antérieur',
+  3: 'Dentelé antérieur',
+  4: 'Grand pectoral',
+  5: 'Obliques',
+  6: 'Mollet (gastrocnémien)',
+  7: 'Abdominaux',
+  8: 'Grand fessier',
+  9: 'Trapèzes',
+  10: 'Quadriceps',
+  11: 'Ischio-jambiers',
+  12: 'Grand dorsal',
+  13: 'Brachial',
+  14: 'Triceps',
+  15: 'Mollet (soléaire)',
+};
+
 const ENGLISH_LANGUAGE_ID = 2;
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -36,6 +57,7 @@ interface WgerExerciseInfo {
   id: number;
   category?: { name?: string } | null;
   images?: { image: string; is_main: boolean }[];
+  muscles?: { id: number }[];
   translations?: { language: number; name: string }[];
 }
 
@@ -44,6 +66,7 @@ interface SearchableExercise {
   name: string;
   normalized_name: string;
   muscle_group: string;
+  muscles: string[];
   image_url: string | null;
 }
 
@@ -80,12 +103,16 @@ async function getExercises(): Promise<SearchableExercise[]> {
 
       const category = ex.category?.name ?? null;
       const mainImage = ex.images?.find((i) => i.is_main) ?? ex.images?.[0] ?? null;
+      const muscles = (ex.muscles ?? [])
+        .map((m) => WGER_MUSCLE_NAME_FR[m.id])
+        .filter((name): name is string => Boolean(name));
 
       return {
         wger_id: ex.id,
         name: translation.name,
         normalized_name: normalize(translation.name),
         muscle_group: (category && CATEGORY_TO_MUSCLE_GROUP[category]) ?? 'autre',
+        muscles,
         image_url: mainImage?.image ?? null,
       };
     })

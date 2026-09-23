@@ -10,11 +10,58 @@ function genKey() {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
 }
 
+interface BlockRow {
+  reps: number;
+  reps_right: number;
+  weight_kg: number;
+}
+
 interface InitialBlock {
   key: string;
-  exercise: Exercise;
-  sets: { reps: number; weight_kg: number }[];
-  side: 'gauche' | 'droit' | null;
+  exercise: Exercise | null;
+  rows: BlockRow[];
+  unilateral: boolean;
+}
+
+// Regroupe les séries existantes par exercice, et fusionne gauche/droit dans
+// des lignes reps_gauche/reps_droit (un exercice unilatéral = un seul bloc,
+// pas deux séparés par côté comme avant cette refonte).
+function buildInitialBlocks(sets: StrengthSet[], exerciseById: Map<string, Exercise>): InitialBlock[] {
+  const byExercise = new Map<string, StrengthSet[]>();
+  sets.forEach((s) => {
+    if (!byExercise.has(s.exercise_id)) byExercise.set(s.exercise_id, []);
+    byExercise.get(s.exercise_id)!.push(s);
+  });
+
+  const blocks: InitialBlock[] = [];
+  byExercise.forEach((exSets, exerciseId) => {
+    const ex = exerciseById.get(exerciseId);
+    if (!ex) return;
+    const unilateral = exSets.some((s) => s.side);
+
+    if (!unilateral) {
+      const rows = [...exSets]
+        .sort((a, b) => a.set_number - b.set_number)
+        .map((s) => ({ reps: s.reps, reps_right: s.reps, weight_kg: Number(s.weight_kg) }));
+      blocks.push({ key: genKey(), exercise: ex, rows, unilateral: false });
+      return;
+    }
+
+    const left = exSets.filter((s) => s.side === 'gauche').sort((a, b) => a.set_number - b.set_number);
+    const right = exSets.filter((s) => s.side === 'droit').sort((a, b) => a.set_number - b.set_number);
+    const n = Math.max(left.length, right.length);
+    const rows: BlockRow[] = [];
+    for (let i = 0; i < n; i++) {
+      rows.push({
+        reps: left[i]?.reps ?? right[i]?.reps ?? 10,
+        reps_right: right[i]?.reps ?? left[i]?.reps ?? 10,
+        weight_kg: Number(left[i]?.weight_kg ?? right[i]?.weight_kg ?? 20),
+      });
+    }
+    blocks.push({ key: genKey(), exercise: ex, rows, unilateral: true });
+  });
+
+  return blocks;
 }
 
 export default function SeanceDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,16 +74,18 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
   const [duration, setDuration] = useState(60);
   const [feeling, setFeeling] = useState(3);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [muscleNamesByExercise, setMuscleNamesByExercise] = useState<Record<string, string[]>>({});
   const [blocks, setBlocks] = useState<InitialBlock[]>([]);
   const [saving, setSaving] = useState(false);
   const blockRefs = useRef<Record<string, ExerciseBlockHandle | null>>({});
 
   useEffect(() => {
     async function load() {
-      const [{ data: sessionData }, { data: setsData }, { data: exercisesData }] = await Promise.all([
+      const [{ data: sessionData }, { data: setsData }, { data: exercisesData }, { data: emData }] = await Promise.all([
         supabase.from('strength_sessions').select('*').eq('id', id).single(),
         supabase.from('strength_sets').select('*').eq('session_id', id).order('set_number'),
         supabase.from('exercises').select('*').order('name'),
+        supabase.from('exercise_muscles').select('exercise_id, muscles(name_fr)').eq('role', 'primaire'),
       ]);
       if (sessionData) {
         setDate(sessionData.date);
@@ -48,26 +97,24 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
       const allExercises: Exercise[] = exercisesData ?? [];
       setExercises(allExercises);
 
-      const exerciseById = new Map(allExercises.map((e) => [e.id, e]));
-      const grouped = new Map<string, InitialBlock>();
-      (setsData ?? []).forEach((s: StrengthSet) => {
-        const ex = exerciseById.get(s.exercise_id);
-        if (!ex) return;
-        const groupKey = `${s.exercise_id}__${s.side ?? ''}`;
-        if (!grouped.has(groupKey)) {
-          grouped.set(groupKey, { key: genKey(), exercise: ex, sets: [], side: s.side });
-        }
-        grouped.get(groupKey)!.sets.push({ reps: s.reps, weight_kg: Number(s.weight_kg) });
+      const muscleMap: Record<string, string[]> = {};
+      (emData ?? []).forEach((row: any) => {
+        const name = row.muscles?.name_fr;
+        if (!name) return;
+        (muscleMap[row.exercise_id] ??= []).push(name);
       });
+      setMuscleNamesByExercise(muscleMap);
 
-      setBlocks(grouped.size > 0 ? Array.from(grouped.values()) : [{ key: genKey(), exercise: null as any, sets: [], side: null }]);
+      const exerciseById = new Map(allExercises.map((e) => [e.id, e]));
+      const initialBlocks = buildInitialBlocks(setsData ?? [], exerciseById);
+      setBlocks(initialBlocks.length > 0 ? initialBlocks : [{ key: genKey(), exercise: null, rows: [], unilateral: false }]);
       setLoading(false);
     }
     load();
   }, [id]);
 
   function addBlock() {
-    setBlocks((prev) => [...prev, { key: genKey(), exercise: null as any, sets: [], side: null }]);
+    setBlocks((prev) => [...prev, { key: genKey(), exercise: null, rows: [], unilateral: false }]);
   }
 
   function removeBlock(key: string) {
@@ -96,9 +143,9 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
       .eq('id', id);
 
     const countByKey: Record<string, number> = {};
-    const flatSets = results.flatMap((r) => {
-      const key = `${r.exercise.id}__${r.side ?? ''}`;
-      return r.sets.map((s) => {
+    const flatSets = results.flatMap((r) =>
+      r.sets.map((s) => {
+        const key = `${r.exercise.id}__${s.side ?? ''}`;
         countByKey[key] = (countByKey[key] ?? 0) + 1;
         return {
           session_id: id,
@@ -106,10 +153,10 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
           set_number: countByKey[key],
           reps: s.reps,
           weight_kg: s.weight_kg,
-          side: r.side,
+          side: s.side,
         };
-      });
-    });
+      })
+    );
 
     // Remplace toutes les séries : supprime puis réinsère (simple et fiable)
     await supabase.from('strength_sets').delete().eq('session_id', id);
@@ -174,12 +221,13 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
           key={b.key}
           index={i}
           exercises={exercises}
+          muscleNamesByExercise={muscleNamesByExercise}
           onExerciseAdded={onExerciseAdded}
           onRemove={() => removeBlock(b.key)}
           removable={blocks.length > 1}
           initialExercise={b.exercise}
-          initialSets={b.sets.length > 0 ? b.sets : undefined}
-          initialSide={b.side}
+          initialRows={b.rows.length > 0 ? b.rows : undefined}
+          initialUnilateral={b.unilateral}
           ref={(el) => {
             blockRefs.current[b.key] = el;
           }}

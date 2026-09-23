@@ -8,15 +8,20 @@ interface WgerResult {
   wger_id: number;
   name: string;
   muscle_group: string;
+  muscles: string[];
   image_url: string | null;
 }
 
 interface ExercisePickerProps {
   // Bibliothèque locale déjà chargée par le parent (tenue à jour via onExerciseAdded)
   exercises: Exercise[];
+  // Muscles précis (noms FR) déjà connus par exercice local, pour affichage
+  muscleNamesByExercise: Record<string, string[]>;
   // Appelé quand un exercice wger encore inconnu est ajouté à la bibliothèque
   onExerciseAdded: (exercise: Exercise) => void;
-  onSelect: (exercise: Exercise) => void;
+  // Le 2e argument donne les muscles précis connus au moment de la sélection
+  // (issus de la bibliothèque locale ou directement de la recherche wger)
+  onSelect: (exercise: Exercise, muscleNames: string[]) => void;
   placeholder?: string;
 }
 
@@ -25,7 +30,13 @@ interface ExercisePickerProps {
 // débounce). Sélectionner un résultat wger encore jamais utilisé l'ajoute
 // automatiquement à la bibliothèque (comme sur /musculation/exercices),
 // muscles et description récupérés en tâche de fond.
-export default function ExercisePicker({ exercises, onExerciseAdded, onSelect, placeholder }: ExercisePickerProps) {
+export default function ExercisePicker({
+  exercises,
+  muscleNamesByExercise,
+  onExerciseAdded,
+  onSelect,
+  placeholder,
+}: ExercisePickerProps) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [wgerResults, setWgerResults] = useState<WgerResult[]>([]);
@@ -58,7 +69,7 @@ export default function ExercisePicker({ exercises, onExerciseAdded, onSelect, p
   const newWgerResults = wgerResults.filter((r) => !localWgerIds.has(r.wger_id));
 
   function selectLocal(ex: Exercise) {
-    onSelect(ex);
+    onSelect(ex, muscleNamesByExercise[ex.id] ?? []);
     setQuery('');
     setOpen(false);
   }
@@ -75,7 +86,7 @@ export default function ExercisePicker({ exercises, onExerciseAdded, onSelect, p
     if (error || !inserted) return;
 
     onExerciseAdded(inserted);
-    onSelect(inserted);
+    onSelect(inserted, r.muscles);
     setQuery('');
     setOpen(false);
 
@@ -127,10 +138,12 @@ export default function ExercisePicker({ exercises, onExerciseAdded, onSelect, p
                   key={ex.id}
                   type="button"
                   onMouseDown={() => selectLocal(ex)}
-                  className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex justify-between items-center"
+                  className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex justify-between items-center gap-3"
                 >
                   <span>{ex.name}</span>
-                  <span className="text-xs text-neutral-500">{ex.muscle_group}</span>
+                  <span className="text-xs text-neutral-500 text-right">
+                    {muscleNamesByExercise[ex.id]?.join(', ') || ex.muscle_group}
+                  </span>
                 </button>
               ))}
             </div>
@@ -144,10 +157,12 @@ export default function ExercisePicker({ exercises, onExerciseAdded, onSelect, p
                   type="button"
                   onMouseDown={() => selectWger(r)}
                   disabled={addingWgerId === r.wger_id}
-                  className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex justify-between items-center"
+                  className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex justify-between items-center gap-3"
                 >
                   <span>{r.name}</span>
-                  <span className="text-xs text-accent">{addingWgerId === r.wger_id ? '...' : `+ ${r.muscle_group}`}</span>
+                  <span className="text-xs text-accent text-right">
+                    {addingWgerId === r.wger_id ? '...' : `+ ${r.muscles.join(', ') || r.muscle_group}`}
+                  </span>
                 </button>
               ))}
             </div>

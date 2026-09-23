@@ -6,14 +6,14 @@ import { Exercise } from '@/lib/types';
 import ExercisePicker from './ExercisePicker';
 
 interface SetRow {
-  reps: number;
+  reps: number; // reps bilatéral, ou côté gauche si unilatéral
+  reps_right: number; // utilisé seulement si unilatéral
   weight_kg: number;
 }
 
 export interface ExerciseBlockResult {
   exercise: Exercise;
-  side: 'gauche' | 'droit' | null;
-  sets: SetRow[];
+  sets: { reps: number; weight_kg: number; side: 'gauche' | 'droit' | null }[];
 }
 
 export interface ExerciseBlockHandle {
@@ -23,12 +23,13 @@ export interface ExerciseBlockHandle {
 interface ExerciseBlockCardProps {
   index: number;
   exercises: Exercise[];
+  muscleNamesByExercise: Record<string, string[]>;
   onExerciseAdded: (ex: Exercise) => void;
   onRemove: () => void;
   removable: boolean;
   initialExercise?: Exercise | null;
-  initialSets?: SetRow[];
-  initialSide?: 'gauche' | 'droit' | null;
+  initialRows?: SetRow[];
+  initialUnilateral?: boolean;
 }
 
 // Un bloc = un exercice de la séance (recherche + séries). Une séance en
@@ -36,14 +37,26 @@ interface ExerciseBlockCardProps {
 // Expose getResult() via ref pour que le parent récupère l'état actuel de
 // tous les blocs au moment d'enregistrer, sans re-render à chaque frappe.
 const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps>(function ExerciseBlockCard(
-  { index, exercises, onExerciseAdded, onRemove, removable, initialExercise, initialSets, initialSide },
+  {
+    index,
+    exercises,
+    muscleNamesByExercise,
+    onExerciseAdded,
+    onRemove,
+    removable,
+    initialExercise,
+    initialRows,
+    initialUnilateral,
+  },
   ref
 ) {
   const [exercise, setExercise] = useState<Exercise | null>(initialExercise ?? null);
-  const [numSets, setNumSets] = useState(initialSets?.length || 3);
-  const [rows, setRows] = useState<SetRow[]>(initialSets ?? []);
-  const [unilateral, setUnilateral] = useState(!!initialSide);
-  const [side, setSide] = useState<'gauche' | 'droit'>(initialSide ?? 'gauche');
+  const [muscleNames, setMuscleNames] = useState<string[]>(
+    initialExercise ? muscleNamesByExercise[initialExercise.id] ?? [] : []
+  );
+  const [numSets, setNumSets] = useState(initialRows?.length || 3);
+  const [rows, setRows] = useState<SetRow[]>(initialRows ?? []);
+  const [unilateral, setUnilateral] = useState(!!initialUnilateral);
   const [suggestion, setSuggestion] = useState<{ reps: number; weight: number; date: string } | null>(null);
 
   useEffect(() => {
@@ -52,7 +65,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     setRows((prev) => {
       const next: SetRow[] = [];
       for (let i = 0; i < numSets; i++) {
-        next.push(prev[i] ?? { reps: defaultReps, weight_kg: defaultWeight });
+        next.push(prev[i] ?? { reps: defaultReps, reps_right: defaultReps, weight_kg: defaultWeight });
       }
       return next;
     });
@@ -96,13 +109,24 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     () => ({
       getResult() {
         if (!exercise || rows.length === 0) return null;
-        return { exercise, side: unilateral ? side : null, sets: rows };
+        const sets = unilateral
+          ? rows.flatMap((r) => [
+              { reps: r.reps, weight_kg: r.weight_kg, side: 'gauche' as const },
+              { reps: r.reps_right, weight_kg: r.weight_kg, side: 'droit' as const },
+            ])
+          : rows.map((r) => ({ reps: r.reps, weight_kg: r.weight_kg, side: null }));
+        return { exercise, sets };
       },
     }),
-    [exercise, rows, unilateral, side]
+    [exercise, rows, unilateral]
   );
 
-  function updateRow(i: number, field: 'reps' | 'weight_kg', value: number) {
+  function selectExercise(ex: Exercise, names: string[]) {
+    setExercise(ex);
+    setMuscleNames(names);
+  }
+
+  function updateRow(i: number, field: 'reps' | 'reps_right' | 'weight_kg', value: number) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
   }
 
@@ -110,7 +134,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     if (!suggestion) return;
     const newReps = type === 'reps' ? suggestion.reps + 1 : suggestion.reps;
     const newWeight = type === 'weight' ? Math.round((suggestion.weight + 2.5) * 2) / 2 : suggestion.weight;
-    setRows(rows.map(() => ({ reps: newReps, weight_kg: newWeight })));
+    setRows(rows.map(() => ({ reps: newReps, reps_right: newReps, weight_kg: newWeight })));
   }
 
   return (
@@ -125,17 +149,28 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
       </div>
 
       {exercise ? (
-        <div className="flex justify-between items-center bg-[#0a0a0a] border border-[#262626] rounded-lg px-3 py-2">
+        <div className="flex justify-between items-center bg-[#0a0a0a] border border-[#262626] rounded-lg px-3 py-2 gap-3">
           <div>
             <div className="font-medium">{exercise.name}</div>
-            <div className="text-xs text-neutral-500">{exercise.muscle_group}</div>
+            <div className="text-xs text-neutral-500">{muscleNames.join(', ') || exercise.muscle_group}</div>
           </div>
-          <button onClick={() => setExercise(null)} className="text-xs text-accent">
+          <button
+            onClick={() => {
+              setExercise(null);
+              setMuscleNames([]);
+            }}
+            className="text-xs text-accent shrink-0"
+          >
             Changer
           </button>
         </div>
       ) : (
-        <ExercisePicker exercises={exercises} onExerciseAdded={onExerciseAdded} onSelect={setExercise} />
+        <ExercisePicker
+          exercises={exercises}
+          muscleNamesByExercise={muscleNamesByExercise}
+          onExerciseAdded={onExerciseAdded}
+          onSelect={selectExercise}
+        />
       )}
 
       {exercise && (
@@ -163,6 +198,11 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
             </div>
           )}
 
+          <label className="text-xs text-neutral-500 flex items-center gap-2">
+            <input type="checkbox" checked={unilateral} onChange={(e) => setUnilateral(e.target.checked)} className="w-auto" />
+            Exercice unilatéral (un bras/une jambe à la fois)
+          </label>
+
           <div>
             <label className="text-xs text-neutral-500">Nombre de séries</label>
             <input
@@ -175,20 +215,30 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
           </div>
 
           <div className="space-y-2">
-            {rows.map((row, i) => (
-              <div key={i} className="grid grid-cols-[auto_1fr_1fr] gap-2 items-center">
-                <span className="text-xs text-neutral-500 w-14">Série {i + 1}</span>
-                <div>
-                  <label className="text-[10px] text-neutral-500">Reps</label>
+            {unilateral && (
+              <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 text-[10px] text-neutral-500 px-0">
+                <span className="w-14" />
+                <span>Reps gauche</span>
+                <span>Reps droit</span>
+                <span>Poids (kg)</span>
+              </div>
+            )}
+            {rows.map((row, i) =>
+              unilateral ? (
+                <div key={i} className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 items-center">
+                  <span className="text-xs text-neutral-500 w-14">Série {i + 1}</span>
                   <input
                     type="number"
                     value={row.reps}
                     onChange={(e) => updateRow(i, 'reps', Number(e.target.value))}
                     min={1}
                   />
-                </div>
-                <div>
-                  <label className="text-[10px] text-neutral-500">Poids (kg)</label>
+                  <input
+                    type="number"
+                    value={row.reps_right}
+                    onChange={(e) => updateRow(i, 'reps_right', Number(e.target.value))}
+                    min={1}
+                  />
                   <input
                     type="number"
                     value={row.weight_kg}
@@ -197,30 +247,32 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
                     step={0.5}
                   />
                 </div>
-              </div>
-            ))}
+              ) : (
+                <div key={i} className="grid grid-cols-[auto_1fr_1fr] gap-2 items-center">
+                  <span className="text-xs text-neutral-500 w-14">Série {i + 1}</span>
+                  <div>
+                    <label className="text-[10px] text-neutral-500">Reps</label>
+                    <input
+                      type="number"
+                      value={row.reps}
+                      onChange={(e) => updateRow(i, 'reps', Number(e.target.value))}
+                      min={1}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-neutral-500">Poids (kg)</label>
+                    <input
+                      type="number"
+                      value={row.weight_kg}
+                      onChange={(e) => updateRow(i, 'weight_kg', Number(e.target.value))}
+                      min={0}
+                      step={0.5}
+                    />
+                  </div>
+                </div>
+              )
+            )}
           </div>
-
-          <label className="text-xs text-neutral-500 flex items-center gap-2">
-            <input type="checkbox" checked={unilateral} onChange={(e) => setUnilateral(e.target.checked)} className="w-auto" />
-            Exercice unilatéral (un bras/une jambe à la fois)
-          </label>
-          {unilateral && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => setSide('gauche')}
-                className={`flex-1 text-sm py-1.5 rounded ${side === 'gauche' ? 'bg-accent text-black font-semibold' : 'border border-[#333] text-neutral-300'}`}
-              >
-                Gauche
-              </button>
-              <button
-                onClick={() => setSide('droit')}
-                className={`flex-1 text-sm py-1.5 rounded ${side === 'droit' ? 'bg-accent text-black font-semibold' : 'border border-[#333] text-neutral-300'}`}
-              >
-                Droit
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>
