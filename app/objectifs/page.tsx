@@ -77,19 +77,19 @@ export default function ObjectifsPage() {
         <div>
           <label className="text-sm text-neutral-400">Nouvel objectif</label>
           <p className="text-xs text-neutral-500 mt-0.5">
-            Suis une progression entre une valeur de départ et une valeur à atteindre — ex: "Semi-marathon" de 0 à 21km,
-            ou "Développé couché" de 60 à 100kg.
+            Donne un titre, où tu en es aujourd'hui, et ce que tu veux atteindre. Ex : "Semi-marathon", actuellement 0km,
+            objectif 21km. Ou "Développé couché", actuellement 60kg, objectif 100kg.
           </p>
         </div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Semi-marathon, Développé couché 100kg..." />
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <label className="text-xs text-neutral-500">Valeur de départ</label>
+            <label className="text-xs text-neutral-500">Valeur actuelle</label>
             <input type="number" value={startValue} onChange={(e) => setStartValue(Number(e.target.value))} />
-            <p className="text-[10px] text-neutral-600 mt-0.5">Ton niveau actuel</p>
+            <p className="text-[10px] text-neutral-600 mt-0.5">Où tu en es aujourd'hui</p>
           </div>
           <div>
-            <label className="text-xs text-neutral-500">Valeur cible</label>
+            <label className="text-xs text-neutral-500">Objectif</label>
             <input type="number" value={targetValue} onChange={(e) => setTargetValue(Number(e.target.value))} />
             <p className="text-[10px] text-neutral-600 mt-0.5">Ce que tu veux atteindre</p>
           </div>
