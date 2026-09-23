@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         <RegisterSW />
-        <div className="max-w-3xl mx-auto px-4 pb-24 pt-6">
+        <div className="max-w-5xl mx-auto px-4 md:px-6 pb-24 pt-6">
           <h1 className="text-2xl font-bold mb-6">🏋️ Suivi Sport</h1>
           {children}
         </div>

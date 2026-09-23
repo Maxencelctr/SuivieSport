@@ -149,138 +149,140 @@ export default function StatsPage() {
   const tooltipStyle = { backgroundColor: '#171717', border: '1px solid #262626' };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <h2 className="text-lg font-semibold">Statistiques</h2>
 
-      {/* Course : distance par run */}
-      <section className="card">
-        <div className="font-medium mb-3">Distance par sortie (km)</div>
-        {distanceData.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={distanceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-              <XAxis dataKey="date" {...chartProps} />
-              <YAxis {...chartProps} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="distance" fill="#ec4899" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </section>
-
-      {/* Course : cumul km/semaine */}
-      <section className="card">
-        <div className="font-medium mb-3">Kilomètres cumulés par semaine</div>
-        {weeklyKmData.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={weeklyKmData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-              <XAxis dataKey="week" {...chartProps} />
-              <YAxis {...chartProps} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="km" fill="#ec4899" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </section>
-
-      {/* Course : allure moyenne par type de sortie */}
-      {paceByType.length > 0 && (
-        <section className="card">
-          <div className="font-medium mb-3">Allure moyenne par type de sortie</div>
-          <div className="space-y-2">
-            {paceByType.map((t) => (
-              <div key={t.type} className="flex justify-between items-center text-sm">
-                <span>{t.label} <span className="text-neutral-500 text-xs">({t.count})</span></span>
-                <span className="text-pink-500">{formatPace(t.avgPace)} /km</span>
-              </div>
-            ))}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">🏃 Course</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="card">
+            <div className="font-medium mb-3">Distance par sortie (km)</div>
+            {distanceData.length === 0 ? (
+              <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={distanceData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <XAxis dataKey="date" {...chartProps} />
+                  <YAxis {...chartProps} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="distance" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        </section>
-      )}
 
-      {/* Course : allure moyenne par météo */}
-      {paceByWeather.length > 1 && (
-        <section className="card">
-          <div className="font-medium mb-3">Allure moyenne par météo</div>
-          <div className="space-y-2">
-            {paceByWeather.map((w) => (
-              <div key={w.weather} className="flex justify-between items-center text-sm">
-                <span>{w.label} <span className="text-neutral-500 text-xs">({w.count})</span></span>
-                <span className="text-pink-500">{formatPace(w.avgPace)} /km</span>
-              </div>
-            ))}
+          <div className="card">
+            <div className="font-medium mb-3">Kilomètres cumulés par semaine</div>
+            {weeklyKmData.length === 0 ? (
+              <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={weeklyKmData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <XAxis dataKey="week" {...chartProps} />
+                  <YAxis {...chartProps} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="km" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
-        </section>
-      )}
 
-      {/* Muscu : progression poids max par exercice */}
-      <section className="card">
-        <div className="flex justify-between items-center mb-3">
-          <div className="font-medium">Progression poids max</div>
-          <select
-            value={selectedExercise}
-            onChange={(e) => setSelectedExercise(e.target.value)}
-            className="w-auto text-sm"
-          >
-            {exercises.map((ex) => (
-              <option key={ex.id} value={ex.id}>{ex.name}</option>
-            ))}
-          </select>
+          {paceByType.length > 0 && (
+            <div className="card">
+              <div className="font-medium mb-3">Allure moyenne par type de sortie</div>
+              <div className="space-y-2">
+                {paceByType.map((t) => (
+                  <div key={t.type} className="flex justify-between items-center text-sm">
+                    <span>{t.label} <span className="text-neutral-500 text-xs">({t.count})</span></span>
+                    <span className="text-pink-500">{formatPace(t.avgPace)} /km</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {paceByWeather.length > 1 && (
+            <div className="card">
+              <div className="font-medium mb-3">Allure moyenne par météo</div>
+              <div className="space-y-2">
+                {paceByWeather.map((w) => (
+                  <div key={w.weather} className="flex justify-between items-center text-sm">
+                    <span>{w.label} <span className="text-neutral-500 text-xs">({w.count})</span></span>
+                    <span className="text-pink-500">{formatPace(w.avgPace)} /km</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        {maxWeightData.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Pas encore de séries enregistrées pour cet exercice.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={maxWeightData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-              <XAxis dataKey="date" {...chartProps} />
-              <YAxis {...chartProps} unit="kg" />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="poids" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
       </section>
 
-      {/* Muscu : répartition par groupe musculaire */}
-      <section className="card">
-        <div className="font-medium mb-3">Volume total par groupe musculaire (reps × poids, tout confondu)</div>
-        {muscleGroupData.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={Math.max(200, muscleGroupData.length * 40)}>
-            <BarChart data={muscleGroupData} layout="vertical" margin={{ left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-              <XAxis type="number" {...chartProps} />
-              <YAxis type="category" dataKey="group" {...chartProps} width={80} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="volume" fill="#22c55e" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">🏋️ Musculation</h3>
+        <div className="grid md:grid-cols-2 gap-4 items-start">
+          <div className="card">
+            <div className="flex justify-between items-center mb-3">
+              <div className="font-medium">Progression poids max</div>
+              <select value={selectedExercise} onChange={(e) => setSelectedExercise(e.target.value)} className="w-auto text-sm">
+                {exercises.map((ex) => (
+                  <option key={ex.id} value={ex.id}>{ex.name}</option>
+                ))}
+              </select>
+            </div>
+            {maxWeightData.length === 0 ? (
+              <p className="text-neutral-500 text-sm">Pas encore de séries enregistrées pour cet exercice.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={maxWeightData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <XAxis dataKey="date" {...chartProps} />
+                  <YAxis {...chartProps} unit="kg" />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Line type="monotone" dataKey="poids" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="font-medium mb-3">Volume total par groupe musculaire (reps × poids)</div>
+            {muscleGroupData.length === 0 ? (
+              <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(200, muscleGroupData.length * 40)}>
+                <BarChart data={muscleGroupData} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <XAxis type="number" {...chartProps} />
+                  <YAxis type="category" dataKey="group" {...chartProps} width={80} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="volume" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
       </section>
 
-      {/* Nutrition : protéines sur 30 jours */}
-      <section className="card">
-        <div className="font-medium mb-3">Protéines par jour (30 derniers jours)</div>
-        {proteinData.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Pas encore de données.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={proteinData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-              <XAxis dataKey="date" {...chartProps} />
-              <YAxis {...chartProps} unit="g" />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="proteines" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">🍗 Nutrition</h3>
+        <div className="card">
+          <div className="font-medium mb-3">Protéines par jour (30 derniers jours)</div>
+          {proteinData.length === 0 ? (
+            <p className="text-neutral-500 text-sm">Pas encore de données.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={proteinData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                <XAxis dataKey="date" {...chartProps} />
+                <YAxis {...chartProps} unit="g" />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Line type="monotone" dataKey="proteines" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
       </section>
     </div>
   );

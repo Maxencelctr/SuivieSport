@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { guessCurrentMeal } from '@/lib/meals';
 
 type Mode = 'run' | 'repas' | null;
 
@@ -34,6 +35,7 @@ export default function QuickAdd({ onSaved }: { onSaved?: () => void }) {
       name: foodName.trim(),
       quantity_g: 100,
       protein_g: foodProtein,
+      meal: guessCurrentMeal(),
     });
     setSaving(false);
     setFoodName('');

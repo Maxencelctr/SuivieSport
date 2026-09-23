@@ -74,25 +74,35 @@ export default function ObjectifsPage() {
       <h2 className="text-lg font-semibold">Objectifs</h2>
 
       <div className="card space-y-3">
-        <label className="text-sm text-neutral-400">Nouvel objectif</label>
+        <div>
+          <label className="text-sm text-neutral-400">Nouvel objectif</label>
+          <p className="text-xs text-neutral-500 mt-0.5">
+            Suis une progression entre une valeur de départ et une valeur à atteindre — ex: "Semi-marathon" de 0 à 21km,
+            ou "Développé couché" de 60 à 100kg.
+          </p>
+        </div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Semi-marathon, Développé couché 100kg..." />
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <label className="text-xs text-neutral-500">Départ</label>
+            <label className="text-xs text-neutral-500">Valeur de départ</label>
             <input type="number" value={startValue} onChange={(e) => setStartValue(Number(e.target.value))} />
+            <p className="text-[10px] text-neutral-600 mt-0.5">Ton niveau actuel</p>
           </div>
           <div>
-            <label className="text-xs text-neutral-500">Cible</label>
+            <label className="text-xs text-neutral-500">Valeur cible</label>
             <input type="number" value={targetValue} onChange={(e) => setTargetValue(Number(e.target.value))} />
+            <p className="text-[10px] text-neutral-600 mt-0.5">Ce que tu veux atteindre</p>
           </div>
           <div>
             <label className="text-xs text-neutral-500">Unité</label>
             <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="km, kg, min" />
+            <p className="text-[10px] text-neutral-600 mt-0.5">km, kg, min, reps...</p>
           </div>
         </div>
         <div>
           <label className="text-xs text-neutral-500">Date cible (optionnel)</label>
           <input type="date" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} />
+          <p className="text-[10px] text-neutral-600 mt-0.5">Pour afficher un compte à rebours (J-XX)</p>
         </div>
         <button onClick={addGoal} disabled={!title.trim()} className="btn-primary w-full">+ Ajouter l'objectif</button>
       </div>
