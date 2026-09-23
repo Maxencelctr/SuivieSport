@@ -119,7 +119,11 @@ export default function PoidsPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
               <XAxis dataKey="date" stroke="#888" fontSize={12} />
               <YAxis stroke="#888" fontSize={12} domain={['dataMin - 2', 'dataMax + 2']} />
-              <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626' }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: 8 }}
+                cursor={{ stroke: '#404040' }}
+                formatter={(v: number) => [`${v} kg`, 'Poids']}
+              />
               <Line type="monotone" dataKey="poids" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>

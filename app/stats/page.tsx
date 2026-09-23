@@ -232,7 +232,13 @@ export default function StatsPage() {
   if (loading) return <p className="text-neutral-500">Chargement...</p>;
 
   const chartProps = { stroke: '#888', fontSize: 12 };
-  const tooltipStyle = { backgroundColor: '#171717', border: '1px solid #262626' };
+  const tooltipStyle = { backgroundColor: '#171717', border: '1px solid #262626', borderRadius: 8 };
+  // Le curseur par défaut de Recharts au survol d'un BarChart est un gros
+  // rectangle gris clair qui traverse tout le graphique — moche sur fond
+  // sombre. On le remplace par une surbrillance discrète (LineChart : un
+  // simple trait fin au lieu de l'épais trait par défaut).
+  const barCursor = { fill: 'rgba(255,255,255,0.06)' };
+  const lineCursor = { stroke: '#404040' };
 
   return (
     <div className="space-y-10">
@@ -251,7 +257,7 @@ export default function StatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} km`, 'Distance']} />
                   <Bar dataKey="distance" fill="#ec4899" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -268,7 +274,7 @@ export default function StatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis dataKey="week" {...chartProps} />
                   <YAxis {...chartProps} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} km`, 'Cumul']} />
                   <Bar dataKey="km" fill="#ec4899" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -325,7 +331,7 @@ export default function StatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} unit="kg" />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={lineCursor} formatter={(v: number) => [`${v} kg`, 'Poids max']} />
                   <Line type="monotone" dataKey="poids" stroke="#22c55e" strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
@@ -333,16 +339,19 @@ export default function StatsPage() {
           </div>
 
           <div className="card">
-            <div className="font-medium mb-3">Volume total par groupe musculaire (reps × poids)</div>
+            <div className="font-medium">Charge totale soulevée par groupe musculaire</div>
+            <p className="text-xs text-neutral-500 mb-3">
+              Répétitions × poids cumulés sur toutes les séances — plus la barre est longue, plus ce groupe a été sollicité.
+            </p>
             {muscleGroupData.length === 0 ? (
               <p className="text-neutral-500 text-sm">Pas encore de données.</p>
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(200, muscleGroupData.length * 40)}>
                 <BarChart data={muscleGroupData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                  <XAxis type="number" {...chartProps} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" horizontal={false} />
+                  <XAxis type="number" {...chartProps} unit="kg" />
                   <YAxis type="category" dataKey="group" {...chartProps} width={80} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} kg`, 'Charge totale']} />
                   <Bar dataKey="volume" fill="#22c55e" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -365,7 +374,7 @@ export default function StatsPage() {
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis yAxisId="left" {...chartProps} unit="g" />
                   <YAxis yAxisId="right" orientation="right" {...chartProps} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={lineCursor} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Line yAxisId="left" type="monotone" name="Protéines (g)" dataKey="proteines" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
                   <Line yAxisId="right" type="monotone" name="Calories" dataKey="calories" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
@@ -384,7 +393,7 @@ export default function StatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} unit="g" />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={lineCursor} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                   <Line type="monotone" name="Glucides (g)" dataKey="glucides" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
                   <Line type="monotone" name="Lipides (g)" dataKey="lipides" stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
@@ -405,7 +414,7 @@ export default function StatsPage() {
                       <Cell key={entry.name} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number, name: string) => [`${v}%`, name]} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -421,7 +430,7 @@ export default function StatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} unit="L" />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} L`, 'Eau bue']} />
                   <Bar dataKey="litres" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -438,7 +447,7 @@ export default function StatsPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
                   <XAxis type="number" {...chartProps} unit="g" />
                   <YAxis type="category" dataKey="meal" {...chartProps} width={130} />
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v}g`, 'Protéines']} />
                   <Bar dataKey="proteines" fill="#eab308" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>

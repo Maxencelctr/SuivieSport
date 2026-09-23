@@ -118,6 +118,8 @@ export interface Profile {
   updated_at: string;
 }
 
+export type GoalType = 'generique' | 'course' | 'musculation';
+
 export interface Goal {
   id: string;
   title: string;
@@ -126,6 +128,10 @@ export interface Goal {
   target_value: number;
   current_value: number;
   target_date: string | null;
+  goal_type: GoalType;
+  distance_km: number | null;
+  exercise_id: string | null;
+  target_reps: number | null;
   created_at: string;
 }
 

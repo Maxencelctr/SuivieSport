@@ -49,6 +49,15 @@ export function formatPace(secondsPerKm: number): string {
   return `${min}:${sec.toString().padStart(2, '0')}`;
 }
 
+// Distances de course classiques, pour les objectifs "course" (matching avec
+// les runs enregistrés à une distance proche) et la sélection de test VMA.
+export const RACE_DISTANCE_PRESETS: { key: string; label: string; km: number }[] = [
+  { key: '5km', label: '5 km', km: 5 },
+  { key: '10km', label: '10 km', km: 10 },
+  { key: 'semi', label: 'Semi-marathon', km: 21.1 },
+  { key: 'marathon', label: 'Marathon', km: 42.195 },
+];
+
 export const RUN_TYPE_LABELS: Record<string, string> = {
   footing: 'Footing',
   fractionne: 'Fractionné',

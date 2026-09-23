@@ -181,11 +181,21 @@ create table profile (
 create table goals (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  unit text not null, -- 'km', 'kg', 'min', etc.
+  unit text not null, -- 'km', 'kg', 'min', etc. (objectifs "générique" uniquement)
   start_value numeric(8,2) not null default 0,
   target_value numeric(8,2) not null,
   current_value numeric(8,2) not null default 0,
   target_date date,
+  goal_type text not null default 'generique' check (goal_type in ('generique', 'course', 'musculation')),
+  -- Objectif "course" : distance visée + temps cible (target_value, en secondes).
+  -- La progression se calcule automatiquement à partir des runs enregistrés
+  -- sur une distance proche, pas de mise à jour manuelle.
+  distance_km numeric(6,2),
+  -- Objectif "musculation" : exercice + reps + poids cible (target_value, en kg).
+  -- La progression se calcule automatiquement à partir des séries
+  -- enregistrées (meilleur poids soulevé à ce nombre de reps ou plus).
+  exercise_id uuid references exercises(id) on delete set null,
+  target_reps int,
   created_at timestamptz default now()
 );
 

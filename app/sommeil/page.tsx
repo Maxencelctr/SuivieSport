@@ -102,7 +102,11 @@ export default function SommeilPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
               <XAxis dataKey="date" stroke="#888" fontSize={12} />
               <YAxis stroke="#888" fontSize={12} domain={[0, 12]} />
-              <Tooltip contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626' }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: 8 }}
+                cursor={{ stroke: '#404040' }}
+                formatter={(v: number) => [`${v} h`, 'Sommeil']}
+              />
               <Line type="monotone" dataKey="heures" stroke="#a78bfa" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
