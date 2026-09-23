@@ -11,6 +11,7 @@ export interface Exercise {
 export interface StrengthSession {
   id: string;
   date: string;
+  time: string | null;
   duration_minutes: number | null;
   feeling: number | null;
   notes: string | null;

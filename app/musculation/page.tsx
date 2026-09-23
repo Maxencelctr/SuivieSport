@@ -47,7 +47,10 @@ export default function MusculationPage() {
         {sessions.map((s) => (
           <Link key={s.id} href={`/musculation/${s.id}`} className="card block hover:border-accent transition">
             <div className="flex justify-between items-center">
-              <div className="font-medium">{new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
+              <div className="font-medium">
+                {new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {s.time && <span className="text-neutral-500 font-normal"> · {s.time.slice(0, 5)}</span>}
+              </div>
               <button onClick={(e) => deleteSession(s.id, e)} className="text-neutral-500 text-sm">Supprimer</button>
             </div>
             {(s.notes || s.feeling) && (

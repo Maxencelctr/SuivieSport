@@ -16,6 +16,7 @@ create table exercises (
 create table strength_sessions (
   id uuid primary key default gen_random_uuid(),
   date date not null default current_date,
+  time time, -- heure de la séance, optionnelle (permet de mieux croiser les stats)
   duration_minutes int, -- durée de la séance, utilisée pour estimer les calories brûlées
   feeling int check (feeling between 1 and 5), -- ressenti de la séance, 1 = très dur, 5 = très facile
   notes text,
