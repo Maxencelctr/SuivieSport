@@ -222,7 +222,17 @@ export default function AlimentationPage() {
   const weekAvgCalories = Math.round(weekEntries.reduce((s, e) => s + (e.calories_kcal ? Number(e.calories_kcal) : 0), 0) / daysInWeek);
 
   const remainingProtein = proteinTarget ? Math.max(0, proteinTarget - totalProtein) : null;
+  const remainingCalories = calorieTarget ? Math.max(0, calorieTarget - totalCalories) : null;
   const totalWater = waterEntries.reduce((sum, w) => sum + w.amount_ml, 0);
+
+  // Répartition des calories du jour par macro (protéines/glucides = 4kcal/g, lipides = 9kcal/g)
+  const proteinKcal = totalProtein * 4;
+  const carbsKcal = totalCarbs * 4;
+  const fatKcal = totalFat * 9;
+  const macroKcalSum = proteinKcal + carbsKcal + fatKcal;
+  const proteinPct = macroKcalSum > 0 ? Math.round((proteinKcal / macroKcalSum) * 100) : 0;
+  const carbsPct = macroKcalSum > 0 ? Math.round((carbsKcal / macroKcalSum) * 100) : 0;
+  const fatPct = macroKcalSum > 0 ? Math.max(0, 100 - proteinPct - carbsPct) : 0;
 
   const entriesByMeal = MEAL_ORDER.map((meal) => ({ meal, items: entries.filter((e) => e.meal === meal) }));
   const unclassified = entries.filter((e) => !e.meal);
@@ -251,6 +261,21 @@ export default function AlimentationPage() {
             <div className="text-xs text-neutral-500">kcal{calorieTarget ? ` / ${calorieTarget}` : ''}</div>
           </div>
         </div>
+        {(remainingProtein !== null || remainingCalories !== null) && (
+          <div className="text-xs text-neutral-400 text-center">
+            {remainingProtein !== null && (
+              <span>
+                <span className="text-accent font-medium">{Math.round(remainingProtein)}g</span> de protéines restantes
+              </span>
+            )}
+            {remainingProtein !== null && remainingCalories !== null && ' · '}
+            {remainingCalories !== null && (
+              <span>
+                <span className="text-yellow-500 font-medium">{Math.round(remainingCalories)}</span> kcal restantes
+              </span>
+            )}
+          </div>
+        )}
         {trainingLabel && trainingBonus > 0 && (
           <div className="text-xs text-amber-500 text-center">
             +{trainingBonus} kcal ajoutées aujourd'hui ({trainingLabel}) — estimation personnalisée à ton poids
@@ -298,6 +323,22 @@ export default function AlimentationPage() {
             </div>
           </div>
         </div>
+
+        {macroKcalSum > 0 && (
+          <div className="pt-1">
+            <div className="text-xs text-neutral-500 mb-1">Répartition des calories</div>
+            <div className="h-2.5 rounded-full overflow-hidden flex bg-[#262626]">
+              {proteinPct > 0 && <div className="h-full bg-accent" style={{ width: `${proteinPct}%` }} />}
+              {carbsPct > 0 && <div className="h-full bg-blue-500" style={{ width: `${carbsPct}%` }} />}
+              {fatPct > 0 && <div className="h-full bg-pink-500" style={{ width: `${fatPct}%` }} />}
+            </div>
+            <div className="flex gap-3 mt-1 text-[11px] text-neutral-500">
+              <span><span className="inline-block w-2 h-2 rounded-full bg-accent mr-1" />Protéines {proteinPct}%</span>
+              <span><span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />Glucides {carbsPct}%</span>
+              <span><span className="inline-block w-2 h-2 rounded-full bg-pink-500 mr-1" />Lipides {fatPct}%</span>
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-between items-center pt-1">
           <div className="text-xs text-neutral-500">
