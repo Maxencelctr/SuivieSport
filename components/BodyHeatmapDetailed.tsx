@@ -14,7 +14,7 @@ interface Props {
 // confondu avec le fond du corps) — l'idée est de voir le corps entier
 // détaillé, pas seulement ce qui est colorié. Puis échelle classique
 // "chaleur" : bleu (léger) -> jaune (un peu) -> orange (bien) -> rouge (beaucoup).
-const UNTRAINED_COLOR = '#4b4560';
+const UNTRAINED_COLOR = '#48435c';
 const HEAT_STOPS: [number, string][] = [
   [0, '#3b82f6'],
   [0.33, '#eab308'],
@@ -35,25 +35,48 @@ function colorFor(intensity: number) {
   return HEAT_STOPS[HEAT_STOPS.length - 1][1];
 }
 
-function interpolate(hex1: string, hex2: string, t: number) {
-  const c1 = hexToRgb(hex1);
-  const c2 = hexToRgb(hex2);
-  const r = Math.round(c1.r + (c2.r - c1.r) * t);
-  const g = Math.round(c1.g + (c2.g - c1.g) * t);
-  const b = Math.round(c1.b + (c2.b - c1.b) * t);
-  return `rgb(${r},${g},${b})`;
-}
-
 function hexToRgb(hex: string) {
   const n = parseInt(hex.slice(1), 16);
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function toHex(n: number) {
+  return Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+}
+
+function interpolate(hex1: string, hex2: string, t: number) {
+  const c1 = hexToRgb(hex1);
+  const c2 = hexToRgb(hex2);
+  return `#${toHex(c1.r + (c2.r - c1.r) * t)}${toHex(c1.g + (c2.g - c1.g) * t)}${toHex(c1.b + (c2.b - c1.b) * t)}`;
+}
+
+function lighten(hex: string, amt: number) {
+  const { r, g, b } = hexToRgb(hex);
+  return `#${toHex(r + (255 - r) * amt)}${toHex(g + (255 - g) * amt)}${toHex(b + (255 - b) * amt)}`;
+}
+
+function darken(hex: string, amt: number) {
+  const { r, g, b } = hexToRgb(hex);
+  return `#${toHex(r * (1 - amt))}${toHex(g * (1 - amt))}${toHex(b * (1 - amt))}`;
+}
+
+// Dégradé radial par muscle : clair au centre (effet "bombé"), plus sombre
+// sur les bords — donne un relief de muscle plutôt qu'un aplat plat.
+function MuscleGradient({ id, color }: { id: string; color: string }) {
+  return (
+    <radialGradient id={id} cx="32%" cy="28%" r="85%">
+      <stop offset="0%" stopColor={lighten(color, 0.38)} />
+      <stop offset="55%" stopColor={color} />
+      <stop offset="100%" stopColor={darken(color, 0.28)} />
+    </radialGradient>
+  );
 }
 
 // Silhouette de base : quelques formes lissées (pas un tracé médical) qui
 // donnent une impression de corps plutôt que des rectangles bruts.
 function BaseSilhouette() {
   return (
-    <g fill="#211d29" stroke="#332e40" strokeWidth="1.5">
+    <g fill="#1a1622" stroke="#2d2738" strokeWidth="1.5">
       {/* Tête + cou */}
       <ellipse cx="100" cy="26" rx="16" ry="19" />
       <path d="M91,42 L91,54 L109,54 L109,42 Z" />
@@ -105,6 +128,11 @@ function ShapePath({ shape, fill, stroke, strokeWidth }: { shape: ShapePiece; fi
       />
     );
   }
+  if (shape.type === 'rect') {
+    return (
+      <rect x={shape.x} y={shape.y} width={shape.width} height={shape.height} rx={shape.rx ?? 3} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+    );
+  }
   return <path d={shape.d} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />;
 }
 
@@ -117,10 +145,15 @@ function Silhouette({
 
   return (
     <svg viewBox="0 0 200 380" className="w-full">
+      <defs>
+        {shapes.map((shape) => (
+          <MuscleGradient key={shape.wgerId} id={`grad-${view}-${shape.wgerId}`} color={colorFor(intensities[shape.wgerId] ?? 0)} />
+        ))}
+      </defs>
+
       <BaseSilhouette />
 
       {shapes.map((shape) => {
-        const intensity = intensities[shape.wgerId] ?? 0;
         const muscle = muscles.find((m) => m.wger_id === shape.wgerId);
         const isSelected = selectedWgerId === shape.wgerId;
         return (
@@ -133,9 +166,9 @@ function Silhouette({
               <ShapePath
                 key={i}
                 shape={piece}
-                fill={colorFor(intensity)}
-                stroke={isSelected ? '#fff' : 'rgba(0,0,0,0.35)'}
-                strokeWidth={isSelected ? 2 : 1}
+                fill={`url(#grad-${view}-${shape.wgerId})`}
+                stroke={isSelected ? '#fff' : 'rgba(0,0,0,0.4)'}
+                strokeWidth={isSelected ? 2 : 0.75}
               />
             ))}
             <title>{muscle?.name_fr ?? ''}</title>
