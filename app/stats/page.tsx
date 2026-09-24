@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
+  LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { Run, StrengthSet, Exercise, FoodEntry, WaterEntry, Supplement, SupplementLog } from '@/lib/types';
 import { RUN_TYPE_LABELS, WEATHER_LABELS, WEATHER_ICONS, formatPace } from '@/lib/running';
 import { MEAL_ORDER, MEAL_LABELS } from '@/lib/meals';
 import { Footprints, Dumbbell, Utensils } from 'lucide-react';
+import { ChartDefs, chartAxisProps, chartGridProps, chartTooltipStyle, chartBarCursor, chartLineCursor } from '@/components/ChartTheme';
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
@@ -194,8 +195,8 @@ export default function StatsPage() {
     if (sum === 0) return [];
     return [
       { name: 'Protéines', value: Math.round((proteinKcal / sum) * 100), color: '#8B5CF6' },
-      { name: 'Glucides', value: Math.round((carbsKcal / sum) * 100), color: '#3b82f6' },
-      { name: 'Lipides', value: Math.round((fatKcal / sum) * 100), color: '#ec4899' },
+      { name: 'Glucides', value: Math.round((carbsKcal / sum) * 100), color: '#38bdf8' },
+      { name: 'Lipides', value: Math.round((fatKcal / sum) * 100), color: '#f472b6' },
     ];
   }, [foodEntries]);
 
@@ -231,17 +232,19 @@ export default function StatsPage() {
 
   if (loading) return <p className="text-neutral-500">Chargement...</p>;
 
-  const chartProps = { stroke: '#888', fontSize: 12 };
-  const tooltipStyle = { backgroundColor: '#171717', border: '1px solid #262626', borderRadius: 8 };
-  // Le curseur par défaut de Recharts au survol d'un BarChart est un gros
-  // rectangle gris clair qui traverse tout le graphique — moche sur fond
-  // sombre. On le remplace par une surbrillance discrète (LineChart : un
-  // simple trait fin au lieu de l'épais trait par défaut).
-  const barCursor = { fill: 'rgba(255,255,255,0.06)' };
-  const lineCursor = { stroke: '#404040' };
+  const chartProps = chartAxisProps;
+  const tooltipStyle = chartTooltipStyle;
+  const barCursor = chartBarCursor;
+  const lineCursor = chartLineCursor;
 
   return (
     <div className="space-y-10">
+      {/* Défs de dégradés partagées par tous les graphiques de la page — un
+          seul mount pour éviter des ids SVG dupliqués (invalides en HTML,
+          font échouer le fill="url(#...)" des graphiques suivants). */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <ChartDefs />
+      </svg>
       <h2 className="text-lg font-semibold">Statistiques</h2>
 
       <section className="space-y-3">
@@ -256,11 +259,11 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={distanceData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <CartesianGrid {...chartGridProps} />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} />
                   <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} km`, 'Distance']} />
-                  <Bar dataKey="distance" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="distance" fill="url(#gradPink)" radius={[6, 6, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -273,11 +276,11 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={weeklyKmData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <CartesianGrid {...chartGridProps} />
                   <XAxis dataKey="week" {...chartProps} />
                   <YAxis {...chartProps} />
                   <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} km`, 'Cumul']} />
-                  <Bar dataKey="km" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="km" fill="url(#gradPink)" radius={[6, 6, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -336,13 +339,13 @@ export default function StatsPage() {
               <p className="text-neutral-500 text-sm">Pas encore de séries enregistrées pour cet exercice.</p>
             ) : (
               <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={maxWeightData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                <AreaChart data={maxWeightData}>
+                  <CartesianGrid {...chartGridProps} />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} unit="kg" />
                   <Tooltip contentStyle={tooltipStyle} cursor={lineCursor} formatter={(v: number) => [`${v} kg`, 'Poids max']} />
-                  <Line type="monotone" dataKey="poids" stroke="#8B5CF6" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
+                  <Area type="monotone" dataKey="poids" stroke="#A78BFA" strokeWidth={2.5} fill="url(#fadeViolet)" dot={{ r: 3, fill: '#A78BFA' }} activeDot={{ r: 5 }} />
+                </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
@@ -357,11 +360,11 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(200, muscleGroupData.length * 40)}>
                 <BarChart data={muscleGroupData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" horizontal={false} />
+                  <CartesianGrid {...chartGridProps} horizontal={false} />
                   <XAxis type="number" {...chartProps} unit="kg" />
                   <YAxis type="category" dataKey="group" {...chartProps} width={80} />
                   <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} kg`, 'Charge totale']} />
-                  <Bar dataKey="volume" fill="#8B5CF6" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="volume" fill="url(#gradVioletH)" radius={[0, 6, 6, 0]} maxBarSize={28} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -380,16 +383,16 @@ export default function StatsPage() {
               <p className="text-neutral-500 text-sm">Pas encore de données.</p>
             ) : (
               <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={proteinCalorieData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                <AreaChart data={proteinCalorieData}>
+                  <CartesianGrid {...chartGridProps} />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis yAxisId="left" {...chartProps} unit="g" />
                   <YAxis yAxisId="right" orientation="right" {...chartProps} />
                   <Tooltip contentStyle={tooltipStyle} cursor={lineCursor} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line yAxisId="left" type="monotone" name="Protéines (g)" dataKey="proteines" stroke="#eab308" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line yAxisId="right" type="monotone" name="Calories" dataKey="calories" stroke="#f97316" strokeWidth={2} dot={{ r: 3 }} />
-                </LineChart>
+                  <Area yAxisId="left" type="monotone" name="Protéines (g)" dataKey="proteines" stroke="#bef264" strokeWidth={2.5} fill="url(#fadeLime)" dot={{ r: 3, fill: '#bef264' }} />
+                  <Line yAxisId="right" type="monotone" name="Calories" dataKey="calories" stroke="#fb923c" strokeWidth={2} dot={{ r: 3 }} />
+                </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
@@ -401,13 +404,13 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <LineChart data={carbsFatData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <CartesianGrid {...chartGridProps} />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} unit="g" />
                   <Tooltip contentStyle={tooltipStyle} cursor={lineCursor} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" name="Glucides (g)" dataKey="glucides" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" name="Lipides (g)" dataKey="lipides" stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" name="Glucides (g)" dataKey="glucides" stroke="#38bdf8" strokeWidth={2.5} dot={{ r: 3 }} />
+                  <Line type="monotone" name="Lipides (g)" dataKey="lipides" stroke="#f472b6" strokeWidth={2.5} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             )}
@@ -438,11 +441,11 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={waterData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <CartesianGrid {...chartGridProps} />
                   <XAxis dataKey="date" {...chartProps} />
                   <YAxis {...chartProps} unit="L" />
                   <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v} L`, 'Eau bue']} />
-                  <Bar dataKey="litres" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="litres" fill="url(#gradBlue)" radius={[6, 6, 0, 0]} maxBarSize={40} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -455,11 +458,11 @@ export default function StatsPage() {
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={proteinByMealData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                  <CartesianGrid {...chartGridProps} horizontal={false} />
                   <XAxis type="number" {...chartProps} unit="g" />
                   <YAxis type="category" dataKey="meal" {...chartProps} width={130} />
                   <Tooltip contentStyle={tooltipStyle} cursor={barCursor} formatter={(v: number) => [`${v}g`, 'Protéines']} />
-                  <Bar dataKey="proteines" fill="#eab308" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="proteines" fill="url(#gradLime)" radius={[0, 6, 6, 0]} maxBarSize={28} />
                 </BarChart>
               </ResponsiveContainer>
             )}

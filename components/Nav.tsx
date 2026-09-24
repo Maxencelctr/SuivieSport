@@ -23,7 +23,7 @@ export default function Nav() {
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center shrink-0">
-            <Image src="/logo-volt.webp" alt="Volt" width={92} height={46} priority className="h-8 w-auto" />
+            <Image src="/logo-volt.png" alt="Volt" width={92} height={46} priority className="h-8 w-auto" />
           </Link>
 
           <nav className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto">

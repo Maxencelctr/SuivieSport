@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import { SleepEntry } from '@/lib/types';
+import { ChartDefs, chartGridProps, chartTooltipStyle, chartLineCursor } from '@/components/ChartTheme';
 
 function todayISO() {
   const d = new Date();
@@ -98,17 +99,14 @@ export default function SommeilPage() {
           <p className="text-neutral-500 text-sm">Aucune donnée pour l'instant.</p>
         ) : (
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-              <XAxis dataKey="date" stroke="#888" fontSize={12} />
-              <YAxis stroke="#888" fontSize={12} domain={[0, 12]} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#171717', border: '1px solid #262626', borderRadius: 8 }}
-                cursor={{ stroke: '#404040' }}
-                formatter={(v: number) => [`${v} h`, 'Sommeil']}
-              />
-              <Line type="monotone" dataKey="heures" stroke="#a78bfa" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
+            <AreaChart data={chartData}>
+              <ChartDefs />
+              <CartesianGrid {...chartGridProps} />
+              <XAxis dataKey="date" stroke="#726b7d" fontSize={12} />
+              <YAxis stroke="#726b7d" fontSize={12} domain={[0, 12]} />
+              <Tooltip contentStyle={chartTooltipStyle} cursor={chartLineCursor} formatter={(v: number) => [`${v} h`, 'Sommeil']} />
+              <Area type="monotone" dataKey="heures" stroke="#A78BFA" strokeWidth={2.5} fill="url(#fadeViolet)" dot={{ r: 3, fill: '#A78BFA' }} activeDot={{ r: 5 }} />
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </div>
