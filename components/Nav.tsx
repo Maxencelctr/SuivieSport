@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { Menu, X } from 'lucide-react';
 
 const links = [
   { href: '/', label: 'Accueil' },
@@ -17,19 +19,32 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+
+  // Ferme le menu mobile à chaque changement de page.
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  // Empêche le scroll de la page derrière le panneau mobile ouvert.
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
   return (
-    <header className="sticky top-0 z-20 bg-[#0a0a0b]/95 backdrop-blur border-b border-[#1e1e21]">
+    <header className="sticky top-0 z-30 bg-[#0a0a0b]/95 backdrop-blur border-b border-[#1e1e21]">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="relative flex items-center h-14 gap-2">
           <Link href="/" className="flex items-center shrink-0">
             <Image src="/logo-volt.png" alt="Volt" width={92} height={46} priority className="h-7 w-auto" />
           </Link>
 
-          {/* Centrée dans tout le header à partir de lg (assez de place pour les
-              8 liens sans chevaucher le logo) ; sur mobile/tablette, reste dans
-              le flux normal juste après le logo, avec défilement horizontal. */}
-          <nav className="flex items-center gap-1 overflow-x-auto lg:absolute lg:left-1/2 lg:-translate-x-1/2 lg:overflow-visible h-full">
+          {/* Nav horizontale, uniquement à partir de md (assez de place pour
+              les 8 liens sans chevaucher le logo). En dessous, menu burger. */}
+          <nav className="hidden md:flex items-center gap-1 md:absolute md:left-1/2 md:-translate-x-1/2 h-full">
             {links.map((link) => {
               const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
               return (
@@ -50,8 +65,39 @@ export default function Nav() {
               );
             })}
           </nav>
+
+          <button
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={open}
+            className="md:hidden ml-auto -mr-2 p-2 text-neutral-300"
+          >
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </div>
+
+      {/* Panneau mobile : liste verticale, pleine largeur, sous le header. */}
+      {open && (
+        <div className="md:hidden border-t border-[#1e1e21] bg-[#0a0a0b] max-h-[calc(100dvh-3.5rem)] overflow-y-auto">
+          <nav className="flex flex-col px-4">
+            {links.map((link) => {
+              const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`py-3.5 text-[15px] font-medium border-b border-[#18181b] last:border-b-0 ${
+                    active ? 'text-white' : 'text-neutral-400'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
