@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import BodyHeatmapDetailed from '@/components/BodyHeatmapDetailed';
+import BodyModelReal from '@/components/BodyModelReal';
 import { Muscle } from '@/lib/types';
 
 type Period = '30j' | 'tout';
@@ -168,7 +168,7 @@ export default function CorpsPage() {
       ) : (
         <>
           <div className="card">
-            <BodyHeatmapDetailed
+            <BodyModelReal
               muscles={muscles}
               intensities={intensities}
               selectedWgerId={selected}
