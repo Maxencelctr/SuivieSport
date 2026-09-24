@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Trash2 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -135,7 +136,9 @@ export default function PoidsPage() {
             <div key={e.id} className="card flex justify-between items-center py-2">
               <span>{new Date(e.date).toLocaleDateString('fr-FR')}</span>
               <span className="text-accent">{Number(e.weight_kg)}kg</span>
-              <button onClick={() => deleteEntry(e.id)} className="text-neutral-500 text-sm">✕</button>
+              <button onClick={() => deleteEntry(e.id)} className="text-red-400/80 hover:text-red-400">
+                <Trash2 size={14} />
+              </button>
             </div>
           ))}
         </div>

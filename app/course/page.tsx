@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Run } from '@/lib/types';
 import { RUN_TYPE_LABELS, WEATHER_ICONS } from '@/lib/running';
@@ -41,11 +42,16 @@ export default function CoursePage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <h2 className="text-lg font-semibold">Sorties course à pied</h2>
-        <div className="flex gap-2">
-          <Link href="/course/zones" className="text-sm text-neutral-400 self-center">VMA</Link>
-          <Link href="/course/nouvelle" className="btn-primary">+ Nouveau run</Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/course/zones"
+            className="text-sm px-3 py-1.5 rounded-lg border border-[#262626] text-neutral-300 hover:border-neutral-600 transition"
+          >
+            VMA
+          </Link>
+          <Link href="/course/nouvelle" className="btn-primary text-sm px-3 py-1.5">+ Nouveau run</Link>
         </div>
       </div>
 
@@ -65,9 +71,13 @@ export default function CoursePage() {
             </div>
             <div className="flex justify-between items-center text-sm text-neutral-400 mt-1">
               <span>{r.distance_km} km — {formatDuration(r.duration_seconds)}{r.elevation_gain_m ? ` — D+${r.elevation_gain_m}m` : ''}{r.feeling ? ` — ${r.feeling}` : ''}</span>
-              <span className="flex gap-3">
-                <Link href={`/course/${r.id}`} className="text-accent">Modifier</Link>
-                <button onClick={() => deleteRun(r.id)} className="text-neutral-500">Supprimer</button>
+              <span className="flex gap-3 shrink-0">
+                <Link href={`/course/${r.id}`} className="flex items-center gap-1 text-accent">
+                  <Pencil size={14} /> Modifier
+                </Link>
+                <button onClick={() => deleteRun(r.id)} className="flex items-center gap-1 text-red-400/80 hover:text-red-400">
+                  <Trash2 size={14} /> Supprimer
+                </button>
               </span>
             </div>
           </div>

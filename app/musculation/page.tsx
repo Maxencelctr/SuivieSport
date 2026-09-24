@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { StrengthSession } from '@/lib/types';
 
@@ -29,12 +30,22 @@ export default function MusculationPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <h2 className="text-lg font-semibold">Séances de musculation</h2>
-        <div className="flex gap-2">
-          <Link href="/musculation/corps" className="text-sm text-neutral-400 self-center">Vue corps</Link>
-          <Link href="/musculation/exercices" className="text-sm text-neutral-400 self-center">Exercices</Link>
-          <Link href="/musculation/nouvelle" className="btn-primary">+ Nouvelle</Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/musculation/corps"
+            className="text-sm px-3 py-1.5 rounded-lg border border-[#262626] text-neutral-300 hover:border-neutral-600 transition"
+          >
+            Vue corps
+          </Link>
+          <Link
+            href="/musculation/exercices"
+            className="text-sm px-3 py-1.5 rounded-lg border border-[#262626] text-neutral-300 hover:border-neutral-600 transition"
+          >
+            Exercices
+          </Link>
+          <Link href="/musculation/nouvelle" className="btn-primary text-sm px-3 py-1.5">+ Nouvelle</Link>
         </div>
       </div>
 
@@ -51,7 +62,12 @@ export default function MusculationPage() {
                 {new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
                 {s.time && <span className="text-neutral-500 font-normal"> · {s.time.slice(0, 5)}</span>}
               </div>
-              <button onClick={(e) => deleteSession(s.id, e)} className="text-neutral-500 text-sm">Supprimer</button>
+              <button
+                onClick={(e) => deleteSession(s.id, e)}
+                className="flex items-center gap-1 text-sm text-red-400/80 hover:text-red-400 shrink-0"
+              >
+                <Trash2 size={14} /> Supprimer
+              </button>
             </div>
             {(s.notes || s.feeling) && (
               <div className="text-neutral-400 text-sm mt-1 flex justify-between">
