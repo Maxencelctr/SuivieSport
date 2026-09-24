@@ -38,12 +38,12 @@ export default function ExerciseDemo({ name }: { name: string }) {
   }, [images]);
 
   if (loading) {
-    return <div className="w-full aspect-[4/3] rounded-lg bg-[#0a0a0a] border border-[#262626] animate-pulse" />;
+    return <div className="w-28 aspect-[4/3] rounded-lg bg-[#0a0a0a] border border-[#262626] animate-pulse" />;
   }
   if (!images || images.length === 0) return null;
 
   return (
-    <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#262626]">
+    <div className="relative w-28 aspect-[4/3] rounded-lg overflow-hidden bg-[#0a0a0a] border border-[#262626] shrink-0">
       {images.map((src, i) => (
         // eslint-disable-next-line @next/next/no-img-element
         <img

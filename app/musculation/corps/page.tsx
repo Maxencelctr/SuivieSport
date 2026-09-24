@@ -5,11 +5,9 @@ import Link from 'next/link';
 import { Plus, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BodyHeatmapDetailed from '@/components/BodyHeatmapDetailed';
-import BodyHeatmapWger from '@/components/BodyHeatmapWger';
 import { Muscle } from '@/lib/types';
 
 type Period = '30j' | 'tout';
-type Style = 'wger' | 'schema';
 
 interface MuscleSuggestion {
   wger_id: number;
@@ -20,7 +18,6 @@ interface MuscleSuggestion {
 
 export default function CorpsPage() {
   const [period, setPeriod] = useState<Period>('30j');
-  const [style, setStyle] = useState<Style>('wger');
   const [muscles, setMuscles] = useState<Muscle[]>([]);
   const [volumesByMuscle, setVolumesByMuscle] = useState<Record<number, number>>({});
   const [selected, setSelected] = useState<number | null>(null);
@@ -74,10 +71,11 @@ export default function CorpsPage() {
     return result;
   }, [volumesByMuscle]);
 
+  // Tous les muscles, même à 0 — l'utilisateur veut voir le corps complet
+  // détaillé, pas seulement ce qui a été travaillé.
   const sortedMuscles = useMemo(() => {
     return muscles
       .map((m) => ({ muscle: m, volume: volumesByMuscle[m.wger_id] ?? 0 }))
-      .filter((x) => x.volume > 0)
       .sort((a, b) => b.volume - a.volume);
   }, [muscles, volumesByMuscle]);
 
@@ -165,36 +163,17 @@ export default function CorpsPage() {
         ))}
       </div>
 
-      <div className="flex gap-2 justify-center text-xs">
-        <button
-          onClick={() => setStyle('wger')}
-          className={`px-3 py-1 rounded-full ${style === 'wger' ? 'bg-accent text-white font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
-        >
-          Illustrations anatomiques
-        </button>
-        <button
-          onClick={() => setStyle('schema')}
-          className={`px-3 py-1 rounded-full ${style === 'schema' ? 'bg-accent text-white font-semibold' : 'text-neutral-400 border border-[#262626]'}`}
-        >
-          Dessin schématique
-        </button>
-      </div>
-
       {loading ? (
         <p className="text-neutral-500 text-sm text-center">Chargement...</p>
       ) : (
         <>
           <div className="card">
-            {style === 'wger' ? (
-              <BodyHeatmapWger intensities={intensities} />
-            ) : (
-              <BodyHeatmapDetailed
-                muscles={muscles}
-                intensities={intensities}
-                selectedWgerId={selected}
-                onSelect={(id) => setSelected(id === selected ? null : id)}
-              />
-            )}
+            <BodyHeatmapDetailed
+              muscles={muscles}
+              intensities={intensities}
+              selectedWgerId={selected}
+              onSelect={(id) => setSelected(id === selected ? null : id)}
+            />
           </div>
 
           {untracked && (
@@ -214,7 +193,7 @@ export default function CorpsPage() {
                 className={`card flex justify-between items-center py-2 w-full text-left ${selected === muscle.wger_id ? 'border-accent' : ''}`}
               >
                 <span>{muscle.name_fr}</span>
-                <span className="text-accent">{Math.round(volume)}</span>
+                <span className={volume > 0 ? 'text-accent' : 'text-neutral-600'}>{volume > 0 ? Math.round(volume) : '—'}</span>
               </button>
             ))}
           </div>

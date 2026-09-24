@@ -150,23 +150,21 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
       </div>
 
       {exercise ? (
-        <div className="space-y-2">
-          <div className="flex justify-between items-center bg-[#0a0a0a] border border-[#262626] rounded-lg px-3 py-2 gap-3">
-            <div>
-              <div className="font-medium">{exercise.name}</div>
-              <div className="text-xs text-neutral-500">{muscleNames.join(', ') || exercise.muscle_group}</div>
-            </div>
-            <button
-              onClick={() => {
-                setExercise(null);
-                setMuscleNames([]);
-              }}
-              className="text-xs text-accent shrink-0"
-            >
-              Changer
-            </button>
-          </div>
+        <div className="flex items-center bg-[#0a0a0a] border border-[#262626] rounded-lg px-3 py-2 gap-3">
           <ExerciseDemo name={exercise.name} />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium truncate">{exercise.name}</div>
+            <div className="text-xs text-neutral-500 truncate">{muscleNames.join(', ') || exercise.muscle_group}</div>
+          </div>
+          <button
+            onClick={() => {
+              setExercise(null);
+              setMuscleNames([]);
+            }}
+            className="text-xs text-accent shrink-0"
+          >
+            Changer
+          </button>
         </div>
       ) : (
         <ExercisePicker

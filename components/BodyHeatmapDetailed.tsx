@@ -10,10 +10,29 @@ interface Props {
   selectedWgerId?: number | null;
 }
 
+// Muscle jamais travaillé : gris-bleu neutre mais clairement visible (pas
+// confondu avec le fond du corps) — l'idée est de voir le corps entier
+// détaillé, pas seulement ce qui est colorié. Puis échelle classique
+// "chaleur" : bleu (léger) -> jaune (un peu) -> orange (bien) -> rouge (beaucoup).
+const UNTRAINED_COLOR = '#4b4560';
+const HEAT_STOPS: [number, string][] = [
+  [0, '#3b82f6'],
+  [0.33, '#eab308'],
+  [0.66, '#f97316'],
+  [1, '#ef4444'],
+];
+
 function colorFor(intensity: number) {
-  if (intensity <= 0) return '#332e40';
-  if (intensity < 0.5) return interpolate('#8B5CF6', '#38bdf8', intensity / 0.5);
-  return interpolate('#38bdf8', '#A3E635', (intensity - 0.5) / 0.5);
+  if (intensity <= 0) return UNTRAINED_COLOR;
+  for (let i = 0; i < HEAT_STOPS.length - 1; i++) {
+    const [t0, c0] = HEAT_STOPS[i];
+    const [t1, c1] = HEAT_STOPS[i + 1];
+    if (intensity <= t1) {
+      const t = (intensity - t0) / (t1 - t0);
+      return interpolate(c0, c1, t);
+    }
+  }
+  return HEAT_STOPS[HEAT_STOPS.length - 1][1];
 }
 
 function interpolate(hex1: string, hex2: string, t: number) {
@@ -115,8 +134,8 @@ function Silhouette({
                 key={i}
                 shape={piece}
                 fill={colorFor(intensity)}
-                stroke={isSelected ? '#fff' : 'rgba(0,0,0,0.25)'}
-                strokeWidth={isSelected ? 2 : 0.75}
+                stroke={isSelected ? '#fff' : 'rgba(0,0,0,0.35)'}
+                strokeWidth={isSelected ? 2 : 1}
               />
             ))}
             <title>{muscle?.name_fr ?? ''}</title>
@@ -140,9 +159,11 @@ export default function BodyHeatmapDetailed(props: Props) {
           <Silhouette view="dos" {...props} />
         </div>
       </div>
-      <div className="flex justify-center gap-1 text-[10px] text-neutral-500 items-center">
-        <span>Peu</span>
-        <div className="w-24 h-2 rounded-full" style={{ background: 'linear-gradient(90deg, #332e40, #8B5CF6, #38bdf8, #A3E635)' }} />
+      <div className="flex justify-center gap-2 text-[10px] text-neutral-500 items-center">
+        <span className="flex items-center gap-1">
+          <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: UNTRAINED_COLOR }} /> Pas travaillé
+        </span>
+        <div className="w-24 h-2 rounded-full" style={{ background: 'linear-gradient(90deg, #3b82f6, #eab308, #f97316, #ef4444)' }} />
         <span>Beaucoup</span>
       </div>
     </div>
