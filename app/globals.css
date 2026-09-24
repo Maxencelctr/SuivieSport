@@ -52,3 +52,12 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: #8B5CF6;
 }
+
+@keyframes wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50px); }
+}
+
+.animate-wave {
+  animation: wave 2.2s linear infinite;
+}

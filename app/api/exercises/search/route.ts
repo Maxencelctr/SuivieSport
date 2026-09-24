@@ -67,6 +67,7 @@ interface SearchableExercise {
   normalized_name: string;
   muscle_group: string;
   muscles: string[];
+  muscle_ids: number[];
   image_url: string | null;
 }
 
@@ -103,9 +104,8 @@ async function getExercises(): Promise<SearchableExercise[]> {
 
       const category = ex.category?.name ?? null;
       const mainImage = ex.images?.find((i) => i.is_main) ?? ex.images?.[0] ?? null;
-      const muscles = (ex.muscles ?? [])
-        .map((m) => WGER_MUSCLE_NAME_FR[m.id])
-        .filter((name): name is string => Boolean(name));
+      const muscleIds = (ex.muscles ?? []).map((m) => m.id);
+      const muscles = muscleIds.map((id) => WGER_MUSCLE_NAME_FR[id]).filter((name): name is string => Boolean(name));
 
       return {
         wger_id: ex.id,
@@ -113,6 +113,7 @@ async function getExercises(): Promise<SearchableExercise[]> {
         normalized_name: normalize(translation.name),
         muscle_group: (category && CATEGORY_TO_MUSCLE_GROUP[category]) ?? 'autre',
         muscles,
+        muscle_ids: muscleIds,
         image_url: mainImage?.image ?? null,
       };
     })
@@ -124,6 +125,24 @@ async function getExercises(): Promise<SearchableExercise[]> {
 
 export async function GET(request: NextRequest) {
   const term = request.nextUrl.searchParams.get('q')?.trim();
+  const muscleParam = request.nextUrl.searchParams.get('muscle');
+
+  if (muscleParam) {
+    const muscleId = Number(muscleParam);
+    try {
+      const exercises = await getExercises();
+      // Priorité aux exercices qui ont une image (suggestions plus parlantes)
+      const results = exercises
+        .filter((ex) => ex.muscle_ids.includes(muscleId))
+        .sort((a, b) => Number(Boolean(b.image_url)) - Number(Boolean(a.image_url)))
+        .slice(0, 6)
+        .map(({ normalized_name, muscle_ids, ...rest }) => rest);
+
+      return NextResponse.json({ results });
+    } catch (err) {
+      return NextResponse.json({ results: [], error: 'Impossible de joindre wger.de' });
+    }
+  }
 
   if (!term || term.length < 2) {
     return NextResponse.json({ results: [] });
@@ -136,7 +155,7 @@ export async function GET(request: NextRequest) {
     const results = exercises
       .filter((ex) => ex.normalized_name.includes(needle))
       .slice(0, 15)
-      .map(({ normalized_name, ...rest }) => rest);
+      .map(({ normalized_name, muscle_ids, ...rest }) => rest);
 
     return NextResponse.json({ results });
   } catch (err) {

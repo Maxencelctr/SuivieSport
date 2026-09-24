@@ -10,6 +10,7 @@ import { COMMON_PROTEIN_FOODS, suggestedQuantity } from '@/lib/proteinSuggestion
 import { runningCalories, strengthCalories, DEFAULT_STRENGTH_DURATION_MIN } from '@/lib/calorieBurn';
 import { MEAL_ORDER, guessCurrentMeal } from '@/lib/meals';
 import MealSection from '@/components/MealSection';
+import WaterDrop from '@/components/WaterDrop';
 
 function todayISO() {
   const d = new Date();
@@ -31,6 +32,7 @@ export default function AlimentationPage() {
 
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
   const [customWater, setCustomWater] = useState(200);
+  const [waterGoalInput, setWaterGoalInput] = useState('2.5');
 
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
@@ -114,8 +116,18 @@ export default function AlimentationPage() {
   useEffect(() => {
     supabase.from('profile').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
       setProfile(data);
+      if (data?.water_goal_ml) setWaterGoalInput((data.water_goal_ml / 1000).toString());
     });
   }, []);
+
+  const waterGoal = profile?.water_goal_ml ?? 2500;
+
+  async function updateWaterGoal(liters: number) {
+    if (!liters || liters <= 0) return;
+    const ml = Math.round(liters * 1000);
+    await supabase.from('profile').upsert({ id: 1, water_goal_ml: ml });
+    setProfile((p) => (p ? { ...p, water_goal_ml: ml } : p));
+  }
 
   useEffect(() => {
     const since = new Date();
@@ -475,8 +487,25 @@ export default function AlimentationPage() {
           <div className="text-sm text-neutral-400 flex items-center gap-1.5">
             <Droplet size={14} /> Hydratation
           </div>
-          <div className="text-lg font-bold text-blue-400">{(totalWater / 1000).toFixed(2).replace(/\.?0+$/, '')}L</div>
+          <div className="flex items-center gap-1 text-xs text-neutral-500">
+            Objectif
+            <input
+              type="number"
+              value={waterGoalInput}
+              onChange={(e) => setWaterGoalInput(e.target.value)}
+              onBlur={() => updateWaterGoal(Number(waterGoalInput))}
+              min={0.5}
+              step={0.25}
+              className="w-16 text-center py-1"
+            />
+            L
+          </div>
         </div>
+
+        <div className="flex justify-center py-2">
+          <WaterDrop currentMl={totalWater} goalMl={waterGoal} />
+        </div>
+
         <div className="flex gap-2">
           <button onClick={() => addWater(250)} className="flex-1 text-xs py-2 rounded border border-[#333] text-neutral-300">+25cl</button>
           <button onClick={() => addWater(500)} className="flex-1 text-xs py-2 rounded border border-[#333] text-neutral-300">+50cl</button>

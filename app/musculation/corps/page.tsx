@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { Plus, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import BodyHeatmapDetailed from '@/components/BodyHeatmapDetailed';
 import BodyHeatmapWger from '@/components/BodyHeatmapWger';
@@ -9,6 +10,13 @@ import { Muscle } from '@/lib/types';
 
 type Period = '30j' | 'tout';
 type Style = 'wger' | 'schema';
+
+interface MuscleSuggestion {
+  wger_id: number;
+  name: string;
+  muscle_group: string;
+  image_url: string | null;
+}
 
 export default function CorpsPage() {
   const [period, setPeriod] = useState<Period>('30j');
@@ -78,6 +86,65 @@ export default function CorpsPage() {
     // (utile pour prévenir si des exercices n'ont pas encore de muscles liés)
     return Object.keys(volumesByMuscle).length === 0;
   }, [volumesByMuscle]);
+
+  const untrainedMuscles = useMemo(
+    () => muscles.filter((m) => !volumesByMuscle[m.wger_id]).sort((a, b) => a.name_fr.localeCompare(b.name_fr)),
+    [muscles, volumesByMuscle]
+  );
+
+  const [suggestionsByMuscle, setSuggestionsByMuscle] = useState<Record<number, MuscleSuggestion[]>>({});
+  const [addedIds, setAddedIds] = useState<Set<number>>(new Set());
+  const [addingId, setAddingId] = useState<number | null>(null);
+
+  // Va chercher quelques exercices pour chaque muscle non travaillé, dès
+  // qu'on sait lesquels sont concernés (évite de le refaire à chaque render)
+  useEffect(() => {
+    if (loading || untrainedMuscles.length === 0) return;
+    untrainedMuscles.forEach((m) => {
+      if (suggestionsByMuscle[m.wger_id]) return;
+      fetch(`/api/exercises/search?muscle=${m.wger_id}`)
+        .then((res) => res.json())
+        .then((json) => {
+          setSuggestionsByMuscle((prev) => ({ ...prev, [m.wger_id]: json.results ?? [] }));
+        })
+        .catch(() => {
+          setSuggestionsByMuscle((prev) => ({ ...prev, [m.wger_id]: [] }));
+        });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, untrainedMuscles]);
+
+  async function addSuggestion(s: MuscleSuggestion) {
+    setAddingId(s.wger_id);
+    const { data: inserted, error } = await supabase
+      .from('exercises')
+      .insert({ name: s.name, muscle_group: s.muscle_group, wger_id: s.wger_id, image_url: s.image_url })
+      .select()
+      .single();
+    setAddingId(null);
+    if (error || !inserted) return;
+
+    setAddedIds((prev) => new Set(prev).add(s.wger_id));
+
+    try {
+      const res = await fetch(`/api/exercises/wger-details?wger_id=${s.wger_id}`);
+      const json = await res.json();
+      if (!json.error) {
+        const { data: musclesData } = await supabase.from('muscles').select('*');
+        const localByWgerId = new Map((musclesData ?? []).map((m: any) => [m.wger_id, m.id]));
+        const primaryLocalIds: string[] = (json.primaryMuscles ?? []).map((id: number) => localByWgerId.get(id)).filter(Boolean);
+        const secondaryLocalIds: string[] = (json.secondaryMuscles ?? []).map((id: number) => localByWgerId.get(id)).filter(Boolean);
+        const rows = [
+          ...primaryLocalIds.map((muscle_id) => ({ exercise_id: inserted.id, muscle_id, role: 'primaire' as const })),
+          ...secondaryLocalIds.map((muscle_id) => ({ exercise_id: inserted.id, muscle_id, role: 'secondaire' as const })),
+        ];
+        if (rows.length > 0) await supabase.from('exercise_muscles').insert(rows);
+        if (json.description) await supabase.from('exercises').update({ description: json.description }).eq('id', inserted.id);
+      }
+    } catch {
+      // Pas grave : récupérable plus tard depuis la fiche de l'exercice
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -151,6 +218,58 @@ export default function CorpsPage() {
               </button>
             ))}
           </div>
+
+          {!untracked && untrainedMuscles.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm text-neutral-400">
+                Pas travaillé{untrainedMuscles.length > 1 ? 's' : ''} {period === '30j' ? '(30 derniers jours)' : ''}
+              </h3>
+              <div className="space-y-2">
+                {untrainedMuscles.map((m) => {
+                  const suggestions = suggestionsByMuscle[m.wger_id];
+                  return (
+                    <div key={m.id} className="card space-y-2">
+                      <div className="text-sm font-medium">{m.name_fr}</div>
+                      {suggestions === undefined ? (
+                        <p className="text-neutral-500 text-xs">Recherche de suggestions...</p>
+                      ) : suggestions.length === 0 ? (
+                        <p className="text-neutral-500 text-xs">Aucune suggestion trouvée.</p>
+                      ) : (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {suggestions.map((s) => {
+                            const added = addedIds.has(s.wger_id);
+                            return (
+                              <button
+                                key={s.wger_id}
+                                onClick={() => !added && addSuggestion(s)}
+                                disabled={added || addingId === s.wger_id}
+                                className="shrink-0 text-left bg-[#0a0a0a] border border-[#262626] rounded-lg p-2 text-xs w-32 hover:border-accent transition"
+                              >
+                                <div className="font-medium truncate mb-1">{s.name}</div>
+                                <div className="flex items-center gap-1 text-accent">
+                                  {added ? (
+                                    <>
+                                      <Check size={12} /> Ajouté
+                                    </>
+                                  ) : addingId === s.wger_id ? (
+                                    '...'
+                                  ) : (
+                                    <>
+                                      <Plus size={12} /> Ajouter
+                                    </>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

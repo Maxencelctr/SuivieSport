@@ -115,6 +115,7 @@ export interface Profile {
   activity_level: ActivityLevel | null;
   goal: NutritionGoal | null;
   vma_kmh: number | null;
+  water_goal_ml: number | null;
   updated_at: string;
 }
 

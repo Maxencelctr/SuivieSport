@@ -173,6 +173,7 @@ create table profile (
   activity_level text, -- 'sedentaire' | 'leger' | 'modere' | 'actif' | 'tres_actif'
   goal text, -- 'seche' | 'maintien' | 'prise_de_masse'
   vma_kmh numeric(4,1), -- vitesse maximale aérobie estimée, en km/h
+  water_goal_ml int default 2500, -- objectif d'hydratation quotidien
   updated_at timestamptz default now(),
   constraint single_row check (id = 1)
 );
