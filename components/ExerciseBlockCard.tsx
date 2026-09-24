@@ -4,6 +4,7 @@ import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Exercise } from '@/lib/types';
 import ExercisePicker from './ExercisePicker';
+import ExerciseDemo from './ExerciseDemo';
 
 interface SetRow {
   reps: number; // reps bilatéral, ou côté gauche si unilatéral
@@ -149,20 +150,23 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
       </div>
 
       {exercise ? (
-        <div className="flex justify-between items-center bg-[#0a0a0a] border border-[#262626] rounded-lg px-3 py-2 gap-3">
-          <div>
-            <div className="font-medium">{exercise.name}</div>
-            <div className="text-xs text-neutral-500">{muscleNames.join(', ') || exercise.muscle_group}</div>
+        <div className="space-y-2">
+          <div className="flex justify-between items-center bg-[#0a0a0a] border border-[#262626] rounded-lg px-3 py-2 gap-3">
+            <div>
+              <div className="font-medium">{exercise.name}</div>
+              <div className="text-xs text-neutral-500">{muscleNames.join(', ') || exercise.muscle_group}</div>
+            </div>
+            <button
+              onClick={() => {
+                setExercise(null);
+                setMuscleNames([]);
+              }}
+              className="text-xs text-accent shrink-0"
+            >
+              Changer
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setExercise(null);
-              setMuscleNames([]);
-            }}
-            className="text-xs text-accent shrink-0"
-          >
-            Changer
-          </button>
+          <ExerciseDemo name={exercise.name} />
         </div>
       ) : (
         <ExercisePicker

@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Exercise, Muscle } from '@/lib/types';
+import ExerciseDemo from '@/components/ExerciseDemo';
 
 interface SetRow {
   id: string;
@@ -143,6 +144,8 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
         <h2 className="text-lg font-semibold">{exercise.name}</h2>
         <Link href="/musculation/exercices" className="text-sm text-neutral-400">← Exercices</Link>
       </div>
+
+      <ExerciseDemo name={exercise.name} />
 
       <div className="card flex justify-around text-center">
         <div>
