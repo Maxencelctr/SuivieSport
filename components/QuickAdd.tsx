@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Zap, Footprints, Utensils, X } from 'lucide-react';
+import { Footprints, Utensils } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { guessCurrentMeal } from '@/lib/meals';
 
@@ -47,19 +47,13 @@ export default function QuickAdd({ onSaved }: { onSaved?: () => void }) {
   if (mode === null) {
     return (
       <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => setMode('run')} className="card text-center hover:border-accent transition">
-          <div className="flex justify-center items-center gap-1 mb-1.5 text-accent">
-            <Zap size={20} />
-            <Footprints size={20} />
-          </div>
-          <div className="text-sm font-semibold">Run rapide</div>
+        <button onClick={() => setMode('run')} className="card flex items-center gap-2.5 hover:border-neutral-600 transition">
+          <Footprints size={18} className="text-accent shrink-0" />
+          <div className="text-sm font-medium">Run rapide</div>
         </button>
-        <button onClick={() => setMode('repas')} className="card text-center hover:border-accent transition">
-          <div className="flex justify-center items-center gap-1 mb-1.5 text-accent">
-            <Zap size={20} />
-            <Utensils size={20} />
-          </div>
-          <div className="text-sm font-semibold">Repas rapide</div>
+        <button onClick={() => setMode('repas')} className="card flex items-center gap-2.5 hover:border-neutral-600 transition">
+          <Utensils size={18} className="text-accent shrink-0" />
+          <div className="text-sm font-medium">Repas rapide</div>
         </button>
       </div>
     );

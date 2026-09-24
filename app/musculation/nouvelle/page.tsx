@@ -206,7 +206,7 @@ export default function NouvelleSeancePage() {
         />
       ))}
 
-      <button onClick={addBlock} className="w-full py-2 rounded-lg border border-dashed border-[#333] text-sm text-neutral-400 hover:text-accent hover:border-accent">
+      <button onClick={addBlock} className="w-full py-2 rounded-lg border border-dashed border-[#333] text-sm text-neutral-400 hover:text-accent hover:border-neutral-600">
         + Ajouter un exercice
       </button>
 

@@ -169,7 +169,7 @@ export default function ExercicesPage() {
       <div className="space-y-2">
         <h3 className="text-sm text-neutral-400">Mes exercices ({exercises.length})</h3>
         {exercises.map((ex) => (
-          <Link key={ex.id} href={`/musculation/exercices/${ex.id}`} className="card flex justify-between items-center py-2 block hover:border-accent transition">
+          <Link key={ex.id} href={`/musculation/exercices/${ex.id}`} className="card flex justify-between items-center py-2 block hover:border-neutral-600 transition">
             <span>{ex.name}</span>
             <span className="text-xs text-neutral-500">{ex.muscle_group}</span>
           </Link>

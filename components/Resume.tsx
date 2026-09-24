@@ -66,13 +66,13 @@ export default function Resume() {
   return (
     <div className="card space-y-3">
       <div className="flex justify-between items-center">
-        <div className="font-medium">{range.label}</div>
+        <div className="eyebrow">{range.label}</div>
         <div className="flex gap-1 text-xs">
           {(['semaine', 'mois', 'annee'] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-2 py-1 rounded ${period === p ? 'bg-accent text-white font-semibold' : 'text-neutral-400'}`}
+              className={`px-2 py-1 rounded ${period === p ? 'bg-accent text-white font-semibold' : 'text-neutral-500 hover:text-neutral-300'}`}
             >
               {p === 'semaine' ? 'Semaine' : p === 'mois' ? 'Mois' : 'Année'}
             </button>
@@ -85,21 +85,21 @@ export default function Resume() {
       ) : (
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
-            <div className="text-xl font-bold text-accent">{muscuCount}</div>
-            <div className="text-xs text-neutral-500 flex items-center justify-center gap-1">
-              <Dumbbell size={12} /> séance{muscuCount !== 1 ? 's' : ''}
+            <div className="stat-number text-2xl text-white">{muscuCount}</div>
+            <div className="text-xs text-neutral-500 flex items-center justify-center gap-1 mt-0.5">
+              <Dumbbell size={12} className="text-accent" /> séance{muscuCount !== 1 ? 's' : ''}
             </div>
           </div>
           <div>
-            <div className="text-xl font-bold text-pink-500">{Math.round(totalKm * 10) / 10}km</div>
-            <div className="text-xs text-neutral-500 flex items-center justify-center gap-1">
-              <Footprints size={12} /> {runCount} run{runCount !== 1 ? 's' : ''}
+            <div className="stat-number text-2xl text-white">{Math.round(totalKm * 10) / 10}km</div>
+            <div className="text-xs text-neutral-500 flex items-center justify-center gap-1 mt-0.5">
+              <Footprints size={12} className="text-accent" /> {runCount} run{runCount !== 1 ? 's' : ''}
             </div>
           </div>
           <div>
-            <div className="text-xl font-bold text-yellow-500">{avgProtein}g</div>
-            <div className="text-xs text-neutral-500 flex items-center justify-center gap-1">
-              <Drumstick size={12} /> protéines/jour
+            <div className="stat-number text-2xl text-white">{avgProtein}g</div>
+            <div className="text-xs text-neutral-500 flex items-center justify-center gap-1 mt-0.5">
+              <Drumstick size={12} className="text-accent" /> protéines/jour
             </div>
           </div>
         </div>

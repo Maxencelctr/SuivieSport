@@ -222,7 +222,7 @@ export default function CorpsPage() {
                                 key={s.wger_id}
                                 onClick={() => !added && addSuggestion(s)}
                                 disabled={added || addingId === s.wger_id}
-                                className="shrink-0 text-left bg-[#0a0a0a] border border-[#262626] rounded-lg p-2 text-xs w-32 hover:border-accent transition"
+                                className="shrink-0 text-left bg-[#0a0a0a] border border-[#262626] rounded-lg p-2 text-xs w-32 hover:border-neutral-600 transition"
                               >
                                 <div className="font-medium truncate mb-1">{s.name}</div>
                                 <div className="flex items-center gap-1 text-accent">

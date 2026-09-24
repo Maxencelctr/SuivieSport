@@ -68,23 +68,26 @@ export default function HomePage() {
         <QuickAdd onSaved={load} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Link href="/musculation/nouvelle" className="card text-center hover:border-accent transition">
-          <Dumbbell className="mx-auto mb-1.5 text-accent" size={26} />
-          <div className="font-semibold text-sm">Nouvelle séance</div>
-        </Link>
-        <Link href="/course/nouvelle" className="card text-center hover:border-accent transition">
-          <Footprints className="mx-auto mb-1.5 text-accent" size={26} />
-          <div className="font-semibold text-sm">Nouveau run</div>
-        </Link>
-        <Link href="/alimentation" className="card text-center hover:border-accent transition">
-          <Utensils className="mx-auto mb-1.5 text-accent" size={26} />
-          <div className="font-semibold text-sm">Alimentation</div>
-        </Link>
-        <Link href="/objectifs" className="card text-center hover:border-accent transition">
-          <Target className="mx-auto mb-1.5 text-accent" size={26} />
-          <div className="font-semibold text-sm">Objectifs</div>
-        </Link>
+      <div>
+        <div className="eyebrow mb-2">Actions rapides</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Link href="/musculation/nouvelle" className="card flex items-center gap-2.5 hover:border-neutral-600 transition">
+            <Dumbbell className="text-accent shrink-0" size={18} />
+            <div className="font-medium text-sm">Nouvelle séance</div>
+          </Link>
+          <Link href="/course/nouvelle" className="card flex items-center gap-2.5 hover:border-neutral-600 transition">
+            <Footprints className="text-accent shrink-0" size={18} />
+            <div className="font-medium text-sm">Nouveau run</div>
+          </Link>
+          <Link href="/alimentation" className="card flex items-center gap-2.5 hover:border-neutral-600 transition">
+            <Utensils className="text-accent shrink-0" size={18} />
+            <div className="font-medium text-sm">Alimentation</div>
+          </Link>
+          <Link href="/objectifs" className="card flex items-center gap-2.5 hover:border-neutral-600 transition">
+            <Target className="text-accent shrink-0" size={18} />
+            <div className="font-medium text-sm">Objectifs</div>
+          </Link>
+        </div>
       </div>
 
       {loading && <p className="text-neutral-500">Chargement...</p>}
@@ -93,7 +96,7 @@ export default function HomePage() {
         <div className="grid md:grid-cols-2 gap-4">
           <section>
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-semibold">Dernières séances muscu</h2>
+              <h2 className="eyebrow">Dernières séances muscu</h2>
               <Link href="/musculation" className="text-xs text-accent">Tout voir →</Link>
             </div>
             {sessions.length === 0 && <p className="text-neutral-500 text-sm">Aucune séance enregistrée.</p>}
@@ -101,7 +104,7 @@ export default function HomePage() {
               {sessions.map((s) => {
                 const stats = sessionStats[s.id];
                 return (
-                  <Link key={s.id} href={`/musculation/${s.id}`} className="card block hover:border-accent transition">
+                  <Link key={s.id} href={`/musculation/${s.id}`} className="card block hover:border-neutral-600 transition">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">
                         {new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
@@ -126,7 +129,7 @@ export default function HomePage() {
 
           <section>
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-semibold">Derniers runs</h2>
+              <h2 className="eyebrow">Derniers runs</h2>
               <Link href="/course" className="text-xs text-accent">Tout voir →</Link>
             </div>
             {runs.length === 0 && <p className="text-neutral-500 text-sm">Aucun run enregistré.</p>}
@@ -135,7 +138,7 @@ export default function HomePage() {
                 const paceMin = Math.floor(r.avg_pace_seconds_per_km / 60);
                 const paceSec = r.avg_pace_seconds_per_km % 60;
                 return (
-                  <Link key={r.id} href={`/course/${r.id}`} className="card block hover:border-accent transition">
+                  <Link key={r.id} href={`/course/${r.id}`} className="card block hover:border-neutral-600 transition">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">
                         {new Date(r.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}

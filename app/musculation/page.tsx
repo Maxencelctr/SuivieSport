@@ -45,7 +45,7 @@ export default function MusculationPage() {
 
       <div className="space-y-2">
         {sessions.map((s) => (
-          <Link key={s.id} href={`/musculation/${s.id}`} className="card block hover:border-accent transition">
+          <Link key={s.id} href={`/musculation/${s.id}`} className="card block hover:border-neutral-600 transition">
             <div className="flex justify-between items-center">
               <div className="font-medium">
                 {new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
