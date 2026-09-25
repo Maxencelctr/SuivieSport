@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Exercise, StrengthSet } from '@/lib/types';
 import ExerciseBlockCard, { ExerciseBlockHandle } from '@/components/ExerciseBlockCard';
+import RestTimerBar from '@/components/RestTimerBar';
+import { useRestTimer } from '@/lib/useRestTimer';
 
 function genKey() {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -78,6 +80,7 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
   const [blocks, setBlocks] = useState<InitialBlock[]>([]);
   const [saving, setSaving] = useState(false);
   const blockRefs = useRef<Record<string, ExerciseBlockHandle | null>>({});
+  const restTimer = useRestTimer();
 
   useEffect(() => {
     async function load() {
@@ -228,6 +231,7 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
           initialExercise={b.exercise}
           initialRows={b.rows.length > 0 ? b.rows : undefined}
           initialUnilateral={b.unilateral}
+          onStartRest={restTimer.start}
           ref={(el) => {
             blockRefs.current[b.key] = el;
           }}
@@ -246,6 +250,8 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
           Supprimer cette séance
         </button>
       </div>
+
+      <RestTimerBar timer={restTimer} />
     </div>
   );
 }

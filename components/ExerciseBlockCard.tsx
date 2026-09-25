@@ -1,6 +1,7 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { Timer } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Exercise } from '@/lib/types';
 import ExercisePicker from './ExercisePicker';
@@ -31,6 +32,7 @@ interface ExerciseBlockCardProps {
   initialExercise?: Exercise | null;
   initialRows?: SetRow[];
   initialUnilateral?: boolean;
+  onStartRest?: (seconds: number) => void;
 }
 
 // Un bloc = un exercice de la séance (recherche + séries). Une séance en
@@ -48,6 +50,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     initialExercise,
     initialRows,
     initialUnilateral,
+    onStartRest,
   },
   ref
 ) {
@@ -275,6 +278,20 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
               )
             )}
           </div>
+
+          {onStartRest && (
+            <div className="flex gap-2">
+              {[60, 90, 120].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onStartRest(s)}
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg border border-[#333] text-neutral-400 hover:text-accent hover:border-accent transition"
+                >
+                  <Timer size={13} /> {s}s
+                </button>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

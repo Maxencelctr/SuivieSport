@@ -6,6 +6,8 @@ import { PartyPopper, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Exercise } from '@/lib/types';
 import ExerciseBlockCard, { ExerciseBlockHandle } from '@/components/ExerciseBlockCard';
+import RestTimerBar from '@/components/RestTimerBar';
+import { useRestTimer } from '@/lib/useRestTimer';
 
 interface PrefillBlock {
   key: string;
@@ -37,6 +39,7 @@ export default function NouvelleSeancePage() {
   );
   const [prefilling, setPrefilling] = useState(!!repeatId);
   const blockRefs = useRef<Record<string, ExerciseBlockHandle | null>>({});
+  const restTimer = useRestTimer();
 
   const [date, setDate] = useState(today);
   const [time, setTime] = useState(nowTime);
@@ -268,6 +271,7 @@ export default function NouvelleSeancePage() {
           initialExercise={b.initialExercise}
           initialRows={b.initialRows}
           initialUnilateral={b.initialUnilateral}
+          onStartRest={restTimer.start}
           ref={(el) => {
             blockRefs.current[b.key] = el;
           }}
@@ -308,6 +312,8 @@ export default function NouvelleSeancePage() {
       <button onClick={saveSession} disabled={saving} className="btn-primary w-full">
         {saving ? 'Enregistrement...' : 'Enregistrer la séance'}
       </button>
+
+      <RestTimerBar timer={restTimer} />
     </div>
   );
 }
