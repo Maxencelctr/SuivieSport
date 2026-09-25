@@ -110,6 +110,7 @@ export interface Profile {
   user_id: string;
   email: string | null;
   pseudo: string | null;
+  avatar_url: string | null;
   invite_code: string | null;
   sex: Sex | null;
   age: number | null;
@@ -156,6 +157,7 @@ export interface ExerciseMuscle {
 export interface Friend {
   friend_id: string;
   friend_label: string;
+  friend_avatar_url: string | null;
 }
 
 export interface FriendRequest {

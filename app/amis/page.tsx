@@ -10,6 +10,7 @@ import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
 import PullToRefresh from '@/components/PullToRefresh';
 import { Challenge, Friend, FriendRequest, LeaderboardEntry } from '@/lib/types';
+import Avatar from '@/components/Avatar';
 
 const PRESETS = ['10 pompes maintenant', '20 squats maintenant', '30 secondes de gainage', 'Va courir 2km aujourd\'hui'];
 
@@ -285,7 +286,10 @@ export default function AmisPage() {
         {friends.length === 0 && <p className="text-neutral-500 text-sm">Aucun ami pour l'instant.</p>}
         {friends.map((f) => (
           <div key={f.friend_id} className="card flex items-center justify-between py-2">
-            <span className="text-sm truncate">{f.friend_label}</span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Avatar url={f.friend_avatar_url} label={f.friend_label} size={28} />
+              <span className="text-sm truncate">{f.friend_label}</span>
+            </div>
             <button onClick={() => removeFriend(f.friend_id)} className="text-red-400/80 hover:text-red-400 shrink-0">
               <Trash2 size={14} />
             </button>
