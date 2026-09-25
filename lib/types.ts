@@ -120,6 +120,7 @@ export interface Profile {
   goal: NutritionGoal | null;
   vma_kmh: number | null;
   water_goal_ml: number | null;
+  unit_system: 'metric' | 'imperial';
   updated_at: string;
 }
 

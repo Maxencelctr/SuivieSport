@@ -11,6 +11,7 @@ import { WeightEntry } from '@/lib/types';
 import { ChartDefs, chartGridProps, chartTooltipStyle, chartLineCursor } from '@/components/ChartTheme';
 import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
+import { UnitSystem, displayWeight, toKg, weightUnitLabel } from '@/lib/units';
 
 function todayISO() {
   const d = new Date();
@@ -24,9 +25,13 @@ export default function PoidsPage() {
   const [date, setDate] = useState(todayISO());
   const [weight, setWeight] = useState(70);
   const [saving, setSaving] = useState(false);
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
 
   useEffect(() => {
     load();
+    supabase.from('profile').select('unit_system').maybeSingle().then(({ data }) => {
+      if (data?.unit_system) setUnitSystem(data.unit_system);
+    });
   }, []);
 
   async function load() {
@@ -63,14 +68,17 @@ export default function PoidsPage() {
   const chartData = useMemo(
     () => entries.map((e) => ({
       date: new Date(e.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }),
-      poids: Number(e.weight_kg),
+      poids: displayWeight(Number(e.weight_kg), unitSystem),
     })),
-    [entries]
+    [entries, unitSystem]
   );
 
   const latest = entries[entries.length - 1];
   const first = entries[0];
-  const diff = latest && first ? Math.round((Number(latest.weight_kg) - Number(first.weight_kg)) * 10) / 10 : 0;
+  const diff = latest && first
+    ? Math.round((displayWeight(Number(latest.weight_kg), unitSystem) - displayWeight(Number(first.weight_kg), unitSystem)) * 10) / 10
+    : 0;
+  const unitLabel = weightUnitLabel(unitSystem);
 
   return (
     <div className="space-y-6">
@@ -86,8 +94,15 @@ export default function PoidsPage() {
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-neutral-500">Poids (kg)</label>
-            <input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} min={30} max={250} step={0.1} />
+            <label className="text-xs text-neutral-500">Poids ({weightUnitLabel(unitSystem)})</label>
+            <input
+              type="number"
+              value={displayWeight(weight, unitSystem)}
+              onChange={(e) => setWeight(toKg(Number(e.target.value), unitSystem))}
+              min={unitSystem === 'imperial' ? 66 : 30}
+              max={unitSystem === 'imperial' ? 550 : 250}
+              step={0.1}
+            />
           </div>
         </div>
         <button onClick={addEntry} disabled={saving} className="btn-primary w-full">
@@ -101,12 +116,12 @@ export default function PoidsPage() {
       {!loading && entries.length > 0 && (
         <div className="card flex justify-around text-center">
           <div>
-            <div className="text-xl font-bold text-accent">{latest ? Number(latest.weight_kg) : '—'}kg</div>
+            <div className="text-xl font-bold text-accent">{latest ? displayWeight(Number(latest.weight_kg), unitSystem) : '—'}{unitLabel}</div>
             <div className="text-xs text-neutral-500">Dernier relevé</div>
           </div>
           <div>
             <div className={`text-xl font-bold ${diff > 0 ? 'text-red-500' : diff < 0 ? 'text-accent' : ''}`}>
-              {diff > 0 ? '+' : ''}{diff}kg
+              {diff > 0 ? '+' : ''}{diff}{unitLabel}
             </div>
             <div className="text-xs text-neutral-500">Depuis le premier relevé</div>
           </div>
@@ -126,7 +141,7 @@ export default function PoidsPage() {
               <CartesianGrid {...chartGridProps} />
               <XAxis dataKey="date" stroke="#726b7d" fontSize={12} />
               <YAxis stroke="#726b7d" fontSize={12} domain={['dataMin - 2', 'dataMax + 2']} />
-              <Tooltip contentStyle={chartTooltipStyle} cursor={chartLineCursor} formatter={(v: number) => [`${v} kg`, 'Poids']} />
+              <Tooltip contentStyle={chartTooltipStyle} cursor={chartLineCursor} formatter={(v: number) => [`${v} ${unitLabel}`, 'Poids']} />
               <Area type="monotone" dataKey="poids" stroke="#A78BFA" strokeWidth={2.5} fill="url(#fadeViolet)" dot={{ r: 3, fill: '#A78BFA' }} activeDot={{ r: 5 }} />
             </AreaChart>
           </ResponsiveContainer>
@@ -139,7 +154,7 @@ export default function PoidsPage() {
           {[...entries].reverse().map((e) => (
             <div key={e.id} className="card flex justify-between items-center py-2">
               <span>{new Date(e.date).toLocaleDateString('fr-FR')}</span>
-              <span className="text-accent">{Number(e.weight_kg)}kg</span>
+              <span className="text-accent">{displayWeight(Number(e.weight_kg), unitSystem)}{unitLabel}</span>
               <button onClick={() => deleteEntry(e.id)} className="text-red-400/80 hover:text-red-400">
                 <Trash2 size={14} />
               </button>

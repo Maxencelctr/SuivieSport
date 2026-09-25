@@ -15,6 +15,7 @@ import { uploadAvatar } from '@/lib/avatar';
 import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
 import Avatar from '@/components/Avatar';
+import { UnitSystem, displayWeight, toKg, weightUnitLabel } from '@/lib/units';
 
 const SECTIONS = [
   { href: '/calendrier', label: 'Calendrier', icon: Calendar },
@@ -38,6 +39,7 @@ export default function ProfilPage() {
   const [weight, setWeight] = useState(70);
   const [activity, setActivity] = useState<ActivityLevel>('modere');
   const [goal, setGoal] = useState<NutritionGoal>('maintien');
+  const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
 
   useEffect(() => {
     supabase.from('profile').select('*').maybeSingle().then(({ data }) => {
@@ -50,6 +52,7 @@ export default function ProfilPage() {
         if (data.weight_kg) setWeight(Number(data.weight_kg));
         if (data.activity_level) setActivity(data.activity_level);
         if (data.goal) setGoal(data.goal);
+        if (data.unit_system) setUnitSystem(data.unit_system);
       }
       setLoading(false);
     });
@@ -80,6 +83,7 @@ export default function ProfilPage() {
       weight_kg: weight,
       activity_level: activity,
       goal,
+      unit_system: unitSystem,
       updated_at: new Date().toISOString(),
     });
     setSaving(false);
@@ -165,12 +169,42 @@ export default function ProfilPage() {
             <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} min={100} max={230} />
           </div>
           <div>
-            <label className="text-xs text-neutral-500">Poids (kg)</label>
-            <input type="number" value={weight} onChange={(e) => setWeight(Number(e.target.value))} min={30} max={250} step={0.5} />
+            <label className="text-xs text-neutral-500">Poids ({weightUnitLabel(unitSystem)})</label>
+            <input
+              type="number"
+              value={displayWeight(weight, unitSystem)}
+              onChange={(e) => setWeight(toKg(Number(e.target.value), unitSystem))}
+              min={unitSystem === 'imperial' ? 66 : 30}
+              max={unitSystem === 'imperial' ? 550 : 250}
+              step={0.5}
+            />
             <Link href="/poids" className="text-xs text-accent">Suivre mon poids dans le temps →</Link>
             <div className="pt-1">
               <Link href="/sommeil" className="text-xs text-accent">Suivre mon sommeil →</Link>
             </div>
+          </div>
+        </div>
+        <div>
+          <label className="text-xs text-neutral-500">Unité de poids</label>
+          <div className="flex gap-1 p-0.5 rounded-lg bg-[#0a0a0b] border border-[#26262a] w-fit">
+            <button
+              type="button"
+              onClick={() => setUnitSystem('metric')}
+              className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${
+                unitSystem === 'metric' ? 'bg-accent text-white' : 'text-neutral-400'
+              }`}
+            >
+              kg
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnitSystem('imperial')}
+              className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${
+                unitSystem === 'imperial' ? 'bg-accent text-white' : 'text-neutral-400'
+              }`}
+            >
+              lb
+            </button>
           </div>
         </div>
         <div>
