@@ -9,6 +9,7 @@ import { RUN_TYPE_LABELS } from '@/lib/running';
 import Resume from '@/components/Resume';
 import QuickAdd from '@/components/QuickAdd';
 import PullToRefresh from '@/components/PullToRefresh';
+import Streak from '@/components/Streak';
 
 const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
   1: { icon: Angry, className: 'text-red-500' },
@@ -64,6 +65,8 @@ export default function HomePage() {
           <Link href="/bilan" className="text-sm text-accent">Bilan →</Link>
         </div>
       </div>
+
+      <Streak />
 
       <div className="grid md:grid-cols-2 gap-4 items-start">
         <Resume />

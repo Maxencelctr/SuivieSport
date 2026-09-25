@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Check, Copy, Flame, Trash2, UserPlus, X } from 'lucide-react';
+import { Bell, Check, Copy, Flame, Trash2, Trophy, UserPlus, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { enablePushNotifications, isPushEnabled, pushSupported } from '@/lib/push';
@@ -9,7 +9,7 @@ import { haptic } from '@/lib/haptics';
 import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
 import PullToRefresh from '@/components/PullToRefresh';
-import { Challenge, Friend, FriendRequest } from '@/lib/types';
+import { Challenge, Friend, FriendRequest, LeaderboardEntry } from '@/lib/types';
 
 const PRESETS = ['10 pompes maintenant', '20 squats maintenant', '30 secondes de gainage', 'Va courir 2km aujourd\'hui'];
 
@@ -28,6 +28,8 @@ export default function AmisPage() {
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [received, setReceived] = useState<Challenge[]>([]);
   const [sent, setSent] = useState<Challenge[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardMetric, setLeaderboardMetric] = useState<'volume_7j' | 'km_7j'>('volume_7j');
 
   const [selectedFriend, setSelectedFriend] = useState('');
   const [message, setMessage] = useState(PRESETS[0]);
@@ -48,16 +50,19 @@ export default function AmisPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: profile }, { data: friendsData }, { data: requestsData }, { data: challengesData }] = await Promise.all([
-      supabase.from('profile').select('invite_code').maybeSingle(),
-      supabase.rpc('get_friends'),
-      supabase.rpc('get_friend_requests'),
-      supabase.from('challenges').select('*').order('created_at', { ascending: false }),
-    ]);
+    const [{ data: profile }, { data: friendsData }, { data: requestsData }, { data: challengesData }, { data: leaderboardData }] =
+      await Promise.all([
+        supabase.from('profile').select('invite_code').maybeSingle(),
+        supabase.rpc('get_friends'),
+        supabase.rpc('get_friend_requests'),
+        supabase.from('challenges').select('*').order('created_at', { ascending: false }),
+        supabase.rpc('get_friends_leaderboard'),
+      ]);
 
     setInviteCode(profile?.invite_code ?? null);
     setFriends(friendsData ?? []);
     setRequests(requestsData ?? []);
+    setLeaderboard(leaderboardData ?? []);
 
     const all = (challengesData ?? []) as Challenge[];
     setReceived(all.filter((c) => c.to_user_id === user?.id));
@@ -287,6 +292,53 @@ export default function AmisPage() {
           </div>
         ))}
       </div>
+
+      {friends.length > 0 && (
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="eyebrow flex items-center gap-1.5">
+              <Trophy size={13} className="text-volt" /> Classement (7 derniers jours)
+            </h3>
+            <div className="flex gap-1 p-0.5 rounded-lg bg-[#0a0a0b] border border-[#26262a]">
+              <button
+                onClick={() => setLeaderboardMetric('volume_7j')}
+                className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
+                  leaderboardMetric === 'volume_7j' ? 'bg-accent text-white' : 'text-neutral-400'
+                }`}
+              >
+                Volume
+              </button>
+              <button
+                onClick={() => setLeaderboardMetric('km_7j')}
+                className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
+                  leaderboardMetric === 'km_7j' ? 'bg-accent text-white' : 'text-neutral-400'
+                }`}
+              >
+                Km
+              </button>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            {[...leaderboard]
+              .sort((a, b) => b[leaderboardMetric] - a[leaderboardMetric])
+              .map((entry, i) => (
+                <div key={entry.person_id} className="flex items-center gap-2 text-sm">
+                  <span className={`w-5 text-center text-xs font-semibold ${i === 0 ? 'text-volt' : 'text-neutral-600'}`}>
+                    {i + 1}
+                  </span>
+                  <span className={`flex-1 truncate ${entry.person_id === user?.id ? 'text-accent font-medium' : ''}`}>
+                    {entry.person_id === user?.id ? 'Toi' : entry.label}
+                  </span>
+                  <span className="stat-number text-neutral-300">
+                    {leaderboardMetric === 'volume_7j'
+                      ? `${Math.round(entry.volume_7j).toLocaleString('fr-FR')}kg`
+                      : `${Math.round(entry.km_7j * 10) / 10}km`}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {friends.length > 0 && (
         <div className="card space-y-3">

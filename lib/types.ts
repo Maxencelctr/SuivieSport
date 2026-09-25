@@ -164,6 +164,13 @@ export interface FriendRequest {
   from_label: string;
 }
 
+export interface LeaderboardEntry {
+  person_id: string;
+  label: string;
+  volume_7j: number;
+  km_7j: number;
+}
+
 export type ChallengeStatus = 'pending' | 'done' | 'dismissed';
 
 export interface Challenge {
