@@ -9,6 +9,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { WeightEntry } from '@/lib/types';
 import { ChartDefs, chartGridProps, chartTooltipStyle, chartLineCursor } from '@/components/ChartTheme';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
 
 function todayISO() {
   const d = new Date();
@@ -16,6 +18,7 @@ function todayISO() {
 }
 
 export default function PoidsPage() {
+  const toast = useToast();
   const [entries, setEntries] = useState<WeightEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(todayISO());
@@ -46,6 +49,7 @@ export default function PoidsPage() {
       // pour que les objectifs caloriques/protéines restent à jour sans ressaisie.
       await supabase.from('profile').upsert({ weight_kg: weight, updated_at: new Date().toISOString() });
       await load();
+      toast.trigger('Pesée enregistrée');
     }
     setSaving(false);
   }
@@ -143,6 +147,8 @@ export default function PoidsPage() {
           ))}
         </div>
       )}
+
+      <Toast message={toast.message} show={toast.show} />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import {
 import { supabase } from '@/lib/supabase';
 import { SleepEntry } from '@/lib/types';
 import { ChartDefs, chartGridProps, chartTooltipStyle, chartLineCursor } from '@/components/ChartTheme';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
 
 function todayISO() {
   const d = new Date();
@@ -16,6 +18,7 @@ function todayISO() {
 }
 
 export default function SommeilPage() {
+  const toast = useToast();
   const [entries, setEntries] = useState<SleepEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(todayISO());
@@ -39,7 +42,10 @@ export default function SommeilPage() {
       { onConflict: 'user_id,date' }
     );
     setSaving(false);
-    if (!error) await load();
+    if (!error) {
+      await load();
+      toast.trigger('Nuit enregistrée');
+    }
   }
 
   async function deleteEntry(id: string) {
@@ -126,6 +132,8 @@ export default function SommeilPage() {
           ))}
         </div>
       )}
+
+      <Toast message={toast.message} show={toast.show} />
     </div>
   );
 }

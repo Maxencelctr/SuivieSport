@@ -8,8 +8,11 @@ import {
   computeBMR, computeTDEE, computeCalorieTarget, computeProteinTarget,
   ACTIVITY_LABELS, GOAL_LABELS,
 } from '@/lib/nutrition';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
 
 export default function ProfilPage() {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pseudo, setPseudo] = useState('');
@@ -48,7 +51,11 @@ export default function ProfilPage() {
       updated_at: new Date().toISOString(),
     });
     setSaving(false);
-    if (error) alert(error.message.includes('unique') ? 'Ce pseudo est déjà pris.' : "Erreur lors de l'enregistrement");
+    if (error) {
+      alert(error.message.includes('unique') ? 'Ce pseudo est déjà pris.' : "Erreur lors de l'enregistrement");
+      return;
+    }
+    toast.trigger('Profil enregistré');
   }
 
   const bmr = computeBMR(sex, weight, height, age);
@@ -128,6 +135,8 @@ export default function ProfilPage() {
       <button onClick={save} disabled={saving} className="btn-primary w-full">
         {saving ? 'Enregistrement...' : 'Enregistrer mon profil'}
       </button>
+
+      <Toast message={toast.message} show={toast.show} />
     </div>
   );
 }
