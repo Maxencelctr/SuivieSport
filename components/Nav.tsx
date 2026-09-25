@@ -28,12 +28,16 @@ export default function Nav() {
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('challenges')
-      .select('id', { count: 'exact', head: true })
-      .eq('to_user_id', user.id)
-      .eq('status', 'pending')
-      .then(({ count }) => setPendingChallenges(count ?? 0));
+    Promise.all([
+      supabase
+        .from('challenges')
+        .select('id', { count: 'exact', head: true })
+        .eq('to_user_id', user.id)
+        .eq('status', 'pending'),
+      supabase.rpc('get_friend_requests'),
+    ]).then(([{ count }, { data: requests }]) => {
+      setPendingChallenges((count ?? 0) + (requests?.length ?? 0));
+    });
   }, [user, pathname]);
 
   // Ferme le menu mobile à chaque changement de page.

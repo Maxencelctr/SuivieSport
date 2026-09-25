@@ -12,6 +12,7 @@ import {
 export default function ProfilPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pseudo, setPseudo] = useState('');
   const [sex, setSex] = useState<Sex>('homme');
   const [age, setAge] = useState(20);
   const [height, setHeight] = useState(175);
@@ -22,6 +23,7 @@ export default function ProfilPage() {
   useEffect(() => {
     supabase.from('profile').select('*').maybeSingle().then(({ data }) => {
       if (data) {
+        if (data.pseudo) setPseudo(data.pseudo);
         if (data.sex) setSex(data.sex);
         if (data.age) setAge(data.age);
         if (data.height_cm) setHeight(Number(data.height_cm));
@@ -36,6 +38,7 @@ export default function ProfilPage() {
   async function save() {
     setSaving(true);
     const { error } = await supabase.from('profile').upsert({
+      pseudo: pseudo.trim() || null,
       sex,
       age,
       height_cm: height,
@@ -45,7 +48,7 @@ export default function ProfilPage() {
       updated_at: new Date().toISOString(),
     });
     setSaving(false);
-    if (error) alert("Erreur lors de l'enregistrement");
+    if (error) alert(error.message.includes('unique') ? 'Ce pseudo est déjà pris.' : "Erreur lors de l'enregistrement");
   }
 
   const bmr = computeBMR(sex, weight, height, age);
@@ -67,6 +70,10 @@ export default function ProfilPage() {
       </p>
 
       <div className="card space-y-3">
+        <div>
+          <label className="text-xs text-neutral-500">Pseudo</label>
+          <input value={pseudo} onChange={(e) => setPseudo(e.target.value)} maxLength={24} placeholder="Affiché à tes amis" />
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-neutral-500">Sexe</label>

@@ -108,6 +108,9 @@ export type NutritionGoal = 'seche' | 'maintien' | 'prise_de_masse';
 
 export interface Profile {
   user_id: string;
+  email: string | null;
+  pseudo: string | null;
+  invite_code: string | null;
   sex: Sex | null;
   age: number | null;
   height_cm: number | null;
@@ -152,7 +155,13 @@ export interface ExerciseMuscle {
 
 export interface Friend {
   friend_id: string;
-  friend_email: string;
+  friend_label: string;
+}
+
+export interface FriendRequest {
+  request_id: string;
+  from_user_id: string;
+  from_label: string;
 }
 
 export type ChallengeStatus = 'pending' | 'done' | 'dismissed';

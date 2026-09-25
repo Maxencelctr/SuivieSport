@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, Check, Copy, Flame, Trash2, X } from 'lucide-react';
+import { Bell, Check, Copy, Flame, Trash2, UserPlus, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { enablePushNotifications, isPushEnabled, pushSupported } from '@/lib/push';
-import { Challenge, Friend } from '@/lib/types';
+import { Challenge, Friend, FriendRequest } from '@/lib/types';
 
 const PRESETS = ['10 pompes maintenant', '20 squats maintenant', '30 secondes de gainage', 'Va courir 2km aujourd\'hui'];
 
@@ -16,9 +16,11 @@ export default function AmisPage() {
   const [codeInput, setCodeInput] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemSuccess, setRedeemSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [received, setReceived] = useState<Challenge[]>([]);
   const [sent, setSent] = useState<Challenge[]>([]);
 
@@ -31,31 +33,32 @@ export default function AmisPage() {
   const [pushError, setPushError] = useState<string | null>(null);
 
   useEffect(() => {
-    load();
     if (pushSupported()) isPushEnabled().then(setPushEnabled);
   }, []);
 
+  useEffect(() => {
+    if (user) load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   async function load() {
     setLoading(true);
-    const [{ data: profile }, { data: friendsData }, { data: challengesData }] = await Promise.all([
+    const [{ data: profile }, { data: friendsData }, { data: requestsData }, { data: challengesData }] = await Promise.all([
       supabase.from('profile').select('invite_code').maybeSingle(),
       supabase.rpc('get_friends'),
+      supabase.rpc('get_friend_requests'),
       supabase.from('challenges').select('*').order('created_at', { ascending: false }),
     ]);
 
     setInviteCode(profile?.invite_code ?? null);
     setFriends(friendsData ?? []);
+    setRequests(requestsData ?? []);
 
     const all = (challengesData ?? []) as Challenge[];
     setReceived(all.filter((c) => c.to_user_id === user?.id));
     setSent(all.filter((c) => c.from_user_id === user?.id));
     setLoading(false);
   }
-
-  useEffect(() => {
-    if (user) load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
 
   async function copyCode() {
     if (!inviteCode) return;
@@ -69,19 +72,26 @@ export default function AmisPage() {
     if (!code) return;
     setRedeeming(true);
     setRedeemError(null);
-    const { error } = await supabase.rpc('redeem_invite_code', { code });
+    setRedeemSuccess(null);
+    const { data, error } = await supabase.rpc('redeem_invite_code', { code });
     setRedeeming(false);
     if (error) {
       setRedeemError(error.message.includes('invalide') ? 'Code invalide.' : error.message);
       return;
     }
     setCodeInput('');
+    setRedeemSuccess(`Demande envoyée à ${data?.[0]?.friend_label ?? 'cet utilisateur'}.`);
+    await load();
+  }
+
+  async function respondRequest(requestId: string, accept: boolean) {
+    await supabase.rpc('respond_friend_request', { request_id: requestId, accept });
     await load();
   }
 
   async function removeFriend(friendId: string) {
     if (!confirm('Retirer cet ami ?')) return;
-    await supabase.from('friendships').delete().eq('friend_id', friendId);
+    await supabase.from('friend_requests').delete().or(`from_user_id.eq.${friendId},to_user_id.eq.${friendId}`);
     await load();
   }
 
@@ -98,13 +108,15 @@ export default function AmisPage() {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (accessToken) {
+        const { data: myProfile } = await supabase.from('profile').select('pseudo, email').maybeSingle();
+        const fromLabel = myProfile?.pseudo ?? myProfile?.email ?? user.email;
         fetch('/api/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             accessToken,
             targetUserId: selectedFriend,
-            title: `Défi de ${user.email}`,
+            title: `Défi de ${fromLabel}`,
             body: message.trim(),
           }),
         }).catch(() => {
@@ -137,7 +149,7 @@ export default function AmisPage() {
   }
 
   function friendLabel(id: string) {
-    return friends.find((f) => f.friend_id === id)?.friend_email ?? '…';
+    return friends.find((f) => f.friend_id === id)?.friend_label ?? '…';
   }
 
   if (loading) return <p className="text-neutral-500 text-sm">Chargement...</p>;
@@ -161,6 +173,34 @@ export default function AmisPage() {
       {pushEnabled && (
         <div className="flex items-center gap-2 text-xs text-neutral-500">
           <Bell size={14} className="text-accent" /> Notifications activées sur cet appareil
+        </div>
+      )}
+
+      {requests.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="eyebrow">Demandes d'amis</h3>
+          {requests.map((r) => (
+            <div key={r.request_id} className="card flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm min-w-0">
+                <UserPlus size={16} className="text-accent shrink-0" />
+                <span className="truncate">{r.from_label}</span>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => respondRequest(r.request_id, true)}
+                  className="flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white font-semibold"
+                >
+                  <Check size={14} /> Accepter
+                </button>
+                <button
+                  onClick={() => respondRequest(r.request_id, false)}
+                  className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-[#333] text-neutral-400"
+                >
+                  <X size={14} /> Refuser
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -218,10 +258,11 @@ export default function AmisPage() {
             className="font-mono"
           />
           <button onClick={redeemCode} disabled={redeeming || !codeInput.trim()} className="btn-primary px-4 shrink-0">
-            {redeeming ? '...' : 'Ajouter'}
+            {redeeming ? '...' : 'Envoyer'}
           </button>
         </div>
         {redeemError && <p className="text-red-400 text-sm">{redeemError}</p>}
+        {redeemSuccess && <p className="text-accent text-sm">{redeemSuccess}</p>}
       </div>
 
       <div className="space-y-2">
@@ -229,7 +270,7 @@ export default function AmisPage() {
         {friends.length === 0 && <p className="text-neutral-500 text-sm">Aucun ami pour l'instant.</p>}
         {friends.map((f) => (
           <div key={f.friend_id} className="card flex items-center justify-between py-2">
-            <span className="text-sm truncate">{f.friend_email}</span>
+            <span className="text-sm truncate">{f.friend_label}</span>
             <button onClick={() => removeFriend(f.friend_id)} className="text-red-400/80 hover:text-red-400 shrink-0">
               <Trash2 size={14} />
             </button>
@@ -246,7 +287,7 @@ export default function AmisPage() {
               <option value="">Choisir un ami</option>
               {friends.map((f) => (
                 <option key={f.friend_id} value={f.friend_id}>
-                  {f.friend_email}
+                  {f.friend_label}
                 </option>
               ))}
             </select>
