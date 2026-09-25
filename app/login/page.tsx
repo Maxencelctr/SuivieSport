@@ -72,8 +72,11 @@ export default function LoginPage() {
           ? 'Ce pseudo est déjà pris.'
           : profileError.message
       );
+      setLoading(false);
+      return;
     }
 
+    sessionStorage.setItem('volt_just_signed_up', '1');
     setLoading(false);
   }
 

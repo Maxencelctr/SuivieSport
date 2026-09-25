@@ -10,6 +10,7 @@ import Resume from '@/components/Resume';
 import QuickAdd from '@/components/QuickAdd';
 import PullToRefresh from '@/components/PullToRefresh';
 import Streak from '@/components/Streak';
+import WelcomeModal from '@/components/WelcomeModal';
 
 const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
   1: { icon: Angry, className: 'text-red-500' },
@@ -24,9 +25,14 @@ export default function HomePage() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [sessionStats, setSessionStats] = useState<Record<string, { exercises: number; sets: number }>>({});
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
     load();
+    if (sessionStorage.getItem('volt_just_signed_up')) {
+      sessionStorage.removeItem('volt_just_signed_up');
+      setShowWelcome(true);
+    }
   }, []);
 
   async function load() {
@@ -54,6 +60,7 @@ export default function HomePage() {
   }
 
   return (
+    <>
     <PullToRefresh onRefresh={load}>
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -165,5 +172,7 @@ export default function HomePage() {
       )}
     </div>
     </PullToRefresh>
+    {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+    </>
   );
 }
