@@ -46,7 +46,7 @@ export default function AlimentationPage() {
     Promise.all([
       supabase.from('strength_sessions').select('duration_minutes').eq('date', date),
       supabase.from('runs').select('distance_km, duration_seconds').eq('date', date),
-      supabase.from('profile').select('weight_kg').eq('id', 1).maybeSingle(),
+      supabase.from('profile').select('weight_kg').maybeSingle(),
     ]).then(([{ data: sessions }, { data: runs }, { data: profileData }]) => {
       const weightKg = profileData?.weight_kg ? Number(profileData.weight_kg) : null;
 
@@ -114,7 +114,7 @@ export default function AlimentationPage() {
   }, []);
 
   useEffect(() => {
-    supabase.from('profile').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
+    supabase.from('profile').select('*').maybeSingle().then(({ data }) => {
       setProfile(data);
       if (data?.water_goal_ml) setWaterGoalInput((data.water_goal_ml / 1000).toString());
     });
@@ -125,7 +125,7 @@ export default function AlimentationPage() {
   async function updateWaterGoal(liters: number) {
     if (!liters || liters <= 0) return;
     const ml = Math.round(liters * 1000);
-    await supabase.from('profile').upsert({ id: 1, water_goal_ml: ml });
+    await supabase.from('profile').upsert({ water_goal_ml: ml });
     setProfile((p) => (p ? { ...p, water_goal_ml: ml } : p));
   }
 

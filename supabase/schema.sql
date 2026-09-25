@@ -15,6 +15,7 @@ create table exercises (
 -- Une séance de musculation
 create table strength_sessions (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   date date not null default current_date,
   time time, -- heure de la séance, optionnelle (permet de mieux croiser les stats)
   duration_minutes int, -- durée de la séance, utilisée pour estimer les calories brûlées
@@ -74,6 +75,7 @@ create table exercise_muscles (
 -- Une sortie course à pied
 create table runs (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   date date not null default current_date,
   distance_km numeric(6,2) not null,
   duration_seconds int not null,
@@ -91,9 +93,11 @@ create table runs (
 -- Suivi du poids de corps dans le temps
 create table weight_entries (
   id uuid primary key default gen_random_uuid(),
-  date date not null default current_date unique,
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  date date not null default current_date,
   weight_kg numeric(5,1) not null,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  unique (user_id, date)
 );
 
 create index idx_weight_entries_date on weight_entries(date);
@@ -101,9 +105,11 @@ create index idx_weight_entries_date on weight_entries(date);
 -- Suivi du sommeil (nombre d'heures dormies, une entrée par nuit)
 create table sleep_entries (
   id uuid primary key default gen_random_uuid(),
-  date date not null default current_date unique, -- date du réveil
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  date date not null default current_date, -- date du réveil
   hours numeric(3,1) not null,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  unique (user_id, date)
 );
 
 create index idx_sleep_entries_date on sleep_entries(date);
@@ -111,6 +117,7 @@ create index idx_sleep_entries_date on sleep_entries(date);
 -- Entrées alimentaires (recherche via Open Food Facts ou saisie manuelle)
 create table food_entries (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   date date not null default current_date,
   name text not null,
   quantity_g numeric(7,1) not null,
@@ -129,6 +136,7 @@ create index idx_food_entries_date on food_entries(date);
 -- une fois, puis réutilisables en sélection rapide sans repasser par Open Food Facts)
 create table custom_foods (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   name text not null,
   ref_quantity_g numeric(7,1) not null, -- quantité de référence (ex: 50g pour "1 barre")
   protein_g numeric(6,2) not null default 0,
@@ -141,6 +149,7 @@ create table custom_foods (
 -- Suivi de l'hydratation
 create table water_entries (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   date date not null default current_date,
   amount_ml int not null,
   created_at timestamptz default now()
@@ -157,15 +166,16 @@ insert into supplements (name) values ('Créatine');
 
 create table supplement_logs (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   supplement_name text not null references supplements(name) on delete cascade,
   date date not null default current_date,
   created_at timestamptz default now(),
-  unique (supplement_name, date)
+  unique (supplement_name, date, user_id)
 );
 
--- Profil utilisateur (une seule ligne, app mono-utilisateur)
+-- Profil utilisateur (une ligne par compte)
 create table profile (
-  id int primary key default 1,
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
   sex text, -- 'homme' | 'femme'
   age int,
   height_cm numeric(5,1),
@@ -174,13 +184,13 @@ create table profile (
   goal text, -- 'seche' | 'maintien' | 'prise_de_masse'
   vma_kmh numeric(4,1), -- vitesse maximale aérobie estimée, en km/h
   water_goal_ml int default 2500, -- objectif d'hydratation quotidien
-  updated_at timestamptz default now(),
-  constraint single_row check (id = 1)
+  updated_at timestamptz default now()
 );
 
 -- Objectifs personnalisés avec barre de progression (ex: courir un semi en 1h50)
 create table goals (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   title text not null,
   unit text not null, -- 'km', 'kg', 'min', etc. (objectifs "générique" uniquement)
   start_value numeric(8,2) not null default 0,
@@ -215,3 +225,46 @@ insert into exercises (name, muscle_group) values
   ('Développé militaire', 'epaules'),
   ('Curl biceps', 'bras'),
   ('Dips', 'bras');
+
+-- Sécurité : chaque utilisateur ne voit/modifie que ses propres données.
+-- Voir supabase/migrations/2026-09-24-add-auth-and-rls.sql pour le détail
+-- complet (policies incluses) appliqué sur un projet déjà existant.
+alter table strength_sessions enable row level security;
+alter table strength_sets enable row level security;
+alter table runs enable row level security;
+alter table weight_entries enable row level security;
+alter table sleep_entries enable row level security;
+alter table food_entries enable row level security;
+alter table custom_foods enable row level security;
+alter table water_entries enable row level security;
+alter table supplement_logs enable row level security;
+alter table goals enable row level security;
+alter table profile enable row level security;
+alter table exercises enable row level security;
+alter table exercise_muscles enable row level security;
+alter table muscles enable row level security;
+alter table supplements enable row level security;
+
+create policy "own rows" on strength_sessions for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on runs for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on weight_entries for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on sleep_entries for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on food_entries for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on custom_foods for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on water_entries for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on supplement_logs for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own rows" on goals for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "own row" on profile for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "own via session" on strength_sets for all
+  using (exists (select 1 from strength_sessions s where s.id = session_id and s.user_id = auth.uid()))
+  with check (exists (select 1 from strength_sessions s where s.id = session_id and s.user_id = auth.uid()));
+
+create policy "read for authenticated" on muscles for select using (auth.role() = 'authenticated');
+create policy "read for authenticated" on supplements for select using (auth.role() = 'authenticated');
+create policy "insert for authenticated" on supplements for insert with check (auth.role() = 'authenticated');
+create policy "read for authenticated" on exercises for select using (auth.role() = 'authenticated');
+create policy "insert for authenticated" on exercises for insert with check (auth.role() = 'authenticated');
+create policy "update for authenticated" on exercises for update using (auth.role() = 'authenticated');
+create policy "read for authenticated" on exercise_muscles for select using (auth.role() = 'authenticated');
+create policy "insert for authenticated" on exercise_muscles for insert with check (auth.role() = 'authenticated');

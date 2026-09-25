@@ -70,7 +70,7 @@ export default function ParametresPage() {
           log.push(`${table} : rien à importer`);
           continue;
         }
-        const { error } = await supabase.from(table).upsert(rows, { onConflict: 'id' });
+        const { error } = await supabase.from(table).upsert(rows, { onConflict: table === 'profile' ? 'user_id' : 'id' });
         if (error) {
           log.push(`${table} : erreur — ${error.message}`);
         } else {

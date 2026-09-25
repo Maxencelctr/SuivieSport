@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from './AuthProvider';
 
 const links = [
   { href: '/', label: 'Accueil' },
@@ -19,6 +21,7 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
 
   // Ferme le menu mobile à chaque changement de page.
@@ -67,6 +70,14 @@ export default function Nav() {
           </nav>
 
           <button
+            onClick={() => supabase.auth.signOut()}
+            className="hidden md:flex ml-auto items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+            title={user?.email ?? undefined}
+          >
+            <LogOut size={15} /> Déconnexion
+          </button>
+
+          <button
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={open}
@@ -95,6 +106,13 @@ export default function Nav() {
                 </Link>
               );
             })}
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="flex items-center gap-1.5 py-3.5 text-[15px] font-medium text-red-400/80"
+            >
+              <LogOut size={16} /> Déconnexion
+              {user?.email && <span className="text-neutral-600 font-normal truncate">· {user.email}</span>}
+            </button>
           </nav>
         </div>
       )}

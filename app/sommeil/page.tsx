@@ -36,7 +36,7 @@ export default function SommeilPage() {
     setSaving(true);
     const { error } = await supabase.from('sleep_entries').upsert(
       { date, hours },
-      { onConflict: 'date' }
+      { onConflict: 'user_id,date' }
     );
     setSaving(false);
     if (!error) await load();

@@ -38,13 +38,13 @@ export default function PoidsPage() {
     // On upsert sur la date pour éviter les doublons si on corrige la pesée du jour
     const { error } = await supabase.from('weight_entries').upsert(
       { date, weight_kg: weight },
-      { onConflict: 'date' }
+      { onConflict: 'user_id,date' }
     );
 
     if (!error) {
       // Synchronise automatiquement le profil avec le dernier poids connu,
       // pour que les objectifs caloriques/protéines restent à jour sans ressaisie.
-      await supabase.from('profile').upsert({ id: 1, weight_kg: weight, updated_at: new Date().toISOString() });
+      await supabase.from('profile').upsert({ weight_kg: weight, updated_at: new Date().toISOString() });
       await load();
     }
     setSaving(false);

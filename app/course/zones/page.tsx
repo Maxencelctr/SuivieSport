@@ -18,7 +18,7 @@ export default function ZonesPage() {
   const [testSeconds, setTestSeconds] = useState(0);
 
   useEffect(() => {
-    supabase.from('profile').select('vma_kmh').eq('id', 1).maybeSingle().then(({ data }) => {
+    supabase.from('profile').select('vma_kmh').maybeSingle().then(({ data }) => {
       if (data?.vma_kmh) setVma(Number(data.vma_kmh));
       setLoading(false);
     });
@@ -30,7 +30,6 @@ export default function ZonesPage() {
     const estimated = computeVMA(testDistance, durationSeconds, testType);
     setVma(Math.round(estimated * 10) / 10);
     await supabase.from('profile').upsert({
-      id: 1,
       vma_kmh: Math.round(estimated * 10) / 10,
       updated_at: new Date().toISOString(),
     });

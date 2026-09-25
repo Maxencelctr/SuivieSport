@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import Nav from '@/components/Nav';
+import AppShell from '@/components/AppShell';
+import AuthProvider from '@/components/AuthProvider';
 import RegisterSW from '@/components/RegisterSW';
 
 export const metadata: Metadata = {
@@ -34,8 +35,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body>
         <RegisterSW />
-        <Nav />
-        <div className="max-w-5xl mx-auto px-4 md:px-6 pb-16 pt-6">{children}</div>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

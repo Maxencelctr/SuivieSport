@@ -20,7 +20,7 @@ export default function ProfilPage() {
   const [goal, setGoal] = useState<NutritionGoal>('maintien');
 
   useEffect(() => {
-    supabase.from('profile').select('*').eq('id', 1).maybeSingle().then(({ data }) => {
+    supabase.from('profile').select('*').maybeSingle().then(({ data }) => {
       if (data) {
         if (data.sex) setSex(data.sex);
         if (data.age) setAge(data.age);
@@ -36,7 +36,6 @@ export default function ProfilPage() {
   async function save() {
     setSaving(true);
     const { error } = await supabase.from('profile').upsert({
-      id: 1,
       sex,
       age,
       height_cm: height,

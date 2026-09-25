@@ -107,7 +107,7 @@ export type ActivityLevel = 'sedentaire' | 'leger' | 'modere' | 'actif' | 'tres_
 export type NutritionGoal = 'seche' | 'maintien' | 'prise_de_masse';
 
 export interface Profile {
-  id: number;
+  user_id: string;
   sex: Sex | null;
   age: number | null;
   height_cm: number | null;
