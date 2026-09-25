@@ -35,8 +35,9 @@ begin
 end $$;
 
 drop policy if exists "send to a friend" on challenges;
-drop policy if exists "see own friendships" on friendships;
-drop policy if exists "remove own friendship" on friendships;
+-- (pas besoin de "drop policy ... on friendships" séparément : DROP TABLE
+-- supprime déjà ses policies avec elle, et "on friendships" échouerait de
+-- toute façon si la table n'existe plus, même avec IF EXISTS sur la policy)
 drop table if exists friendships;
 
 alter table friend_requests enable row level security;
