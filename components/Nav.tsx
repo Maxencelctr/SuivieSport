@@ -15,6 +15,7 @@ const links = [
   { href: '/calendrier', label: 'Calendrier' },
   { href: '/alimentation', label: 'Manger' },
   { href: '/objectifs', label: 'Objectifs' },
+  { href: '/amis', label: 'Amis' },
   { href: '/stats', label: 'Stats' },
   { href: '/profil', label: 'Profil' },
 ];
@@ -23,6 +24,17 @@ export default function Nav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [pendingChallenges, setPendingChallenges] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('challenges')
+      .select('id', { count: 'exact', head: true })
+      .eq('to_user_id', user.id)
+      .eq('status', 'pending')
+      .then(({ count }) => setPendingChallenges(count ?? 0));
+  }, [user, pathname]);
 
   // Ferme le menu mobile à chaque changement de page.
   useEffect(() => {
@@ -59,6 +71,11 @@ export default function Nav() {
                   }`}
                 >
                   {link.label}
+                  {link.href === '/amis' && pendingChallenges > 0 && (
+                    <span className="ml-1 min-w-[16px] h-4 px-1 rounded-full bg-accent text-white text-[10px] font-semibold flex items-center justify-center">
+                      {pendingChallenges}
+                    </span>
+                  )}
                   <span
                     className={`absolute left-2.5 right-2.5 bottom-0 h-[2px] rounded-full transition-colors ${
                       active ? 'bg-accent' : 'bg-transparent'
@@ -98,11 +115,16 @@ export default function Nav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`py-3.5 text-[15px] font-medium border-b border-[#18181b] last:border-b-0 ${
+                  className={`flex items-center gap-2 py-3.5 text-[15px] font-medium border-b border-[#18181b] last:border-b-0 ${
                     active ? 'text-white' : 'text-neutral-400'
                   }`}
                 >
                   {link.label}
+                  {link.href === '/amis' && pendingChallenges > 0 && (
+                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-accent text-white text-[11px] font-semibold flex items-center justify-center">
+                      {pendingChallenges}
+                    </span>
+                  )}
                 </Link>
               );
             })}

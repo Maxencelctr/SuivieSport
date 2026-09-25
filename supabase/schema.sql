@@ -268,3 +268,7 @@ create policy "insert for authenticated" on exercises for insert with check (aut
 create policy "update for authenticated" on exercises for update using (auth.role() = 'authenticated');
 create policy "read for authenticated" on exercise_muscles for select using (auth.role() = 'authenticated');
 create policy "insert for authenticated" on exercise_muscles for insert with check (auth.role() = 'authenticated');
+
+-- Amis + défis + notifications push : voir
+-- supabase/migrations/2026-09-25-add-friends-challenges-push.sql pour le
+-- détail complet (tables, policies, fonctions), appliqué tel quel ici.

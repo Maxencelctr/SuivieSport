@@ -149,3 +149,20 @@ export interface ExerciseMuscle {
   muscle_id: string;
   role: 'primaire' | 'secondaire';
 }
+
+export interface Friend {
+  friend_id: string;
+  friend_email: string;
+}
+
+export type ChallengeStatus = 'pending' | 'done' | 'dismissed';
+
+export interface Challenge {
+  id: string;
+  from_user_id: string;
+  to_user_id: string;
+  message: string;
+  status: ChallengeStatus;
+  created_at: string;
+  completed_at: string | null;
+}
