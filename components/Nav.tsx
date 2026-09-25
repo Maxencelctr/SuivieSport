@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { LogOut, Menu, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { signOutAndClear } from '@/lib/auth';
 import { useAuth } from './AuthProvider';
 
 const links = [
@@ -91,7 +92,7 @@ export default function Nav() {
           </nav>
 
           <button
-            onClick={() => supabase.auth.signOut()}
+            onClick={() => signOutAndClear()}
             className="hidden md:flex ml-auto items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
             title={user?.email ?? undefined}
           >
@@ -133,7 +134,7 @@ export default function Nav() {
               );
             })}
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => signOutAndClear()}
               className="flex items-center gap-1.5 py-3.5 text-[15px] font-medium text-red-400/80"
             >
               <LogOut size={16} /> Déconnexion

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'suivi-sport-v1';
+const CACHE_NAME = 'suivi-sport-v2';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -16,8 +16,15 @@ self.addEventListener('activate', (event) => {
 // Stratégie "network first, fallback cache" : toujours la version la plus
 // fraîche quand il y a du réseau, mais l'app reste consultable hors-ligne
 // sur les pages déjà visitées (utile en salle de sport avec peu de réseau).
+//
+// Important : uniquement pour les requêtes vers notre propre origine (pages,
+// JS, assets). Les appels vers Supabase (données perso : séances, repas...)
+// sont sur un autre domaine et ne doivent JAMAIS être mis en cache ici —
+// sinon ces données resteraient stockées en clair sur l'appareil même après
+// déconnexion.
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (new URL(event.request.url).origin !== self.location.origin) return;
 
   event.respondWith(
     fetch(event.request)
