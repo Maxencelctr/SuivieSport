@@ -3,26 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Flame } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-
-function toLocalISO(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-// Série de jours consécutifs avec au moins une séance ou un run. Le jour en
-// cours compte encore comme "en cours" tant qu'hier était actif, même si
-// rien n'est encore loggé aujourd'hui (pas cassée avant minuit).
-function computeStreak(activeDates: Set<string>): number {
-  let streak = 0;
-  const cursor = new Date();
-  if (!activeDates.has(toLocalISO(cursor))) {
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  while (activeDates.has(toLocalISO(cursor))) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
+import { computeStreak, toLocalISO } from '@/lib/streak';
 
 export default function Streak() {
   const [streak, setStreak] = useState<number | null>(null);

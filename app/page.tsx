@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Settings, Dumbbell, Footprints, Utensils, Target, Angry, Frown, Meh, Smile, Laugh } from 'lucide-react';
+import { Settings, Dumbbell, Footprints, Utensils, Target, Angry, Frown, Meh, Smile, Laugh, Share2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { StrengthSession, Run } from '@/lib/types';
 import { RUN_TYPE_LABELS } from '@/lib/running';
@@ -11,6 +11,7 @@ import QuickAdd from '@/components/QuickAdd';
 import PullToRefresh from '@/components/PullToRefresh';
 import Streak from '@/components/Streak';
 import WelcomeModal from '@/components/WelcomeModal';
+import WeeklyRecapModal from '@/components/WeeklyRecapModal';
 
 const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
   1: { icon: Angry, className: 'text-red-500' },
@@ -26,6 +27,7 @@ export default function HomePage() {
   const [sessionStats, setSessionStats] = useState<Record<string, { exercises: number; sets: number }>>({});
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showRecap, setShowRecap] = useState(false);
 
   useEffect(() => {
     load();
@@ -74,6 +76,13 @@ export default function HomePage() {
       </div>
 
       <Streak />
+
+      <button
+        onClick={() => setShowRecap(true)}
+        className="w-full flex items-center justify-center gap-2 text-sm py-2 rounded-lg border border-dashed border-[#333] text-neutral-400 hover:text-accent hover:border-accent transition"
+      >
+        <Share2 size={14} /> Partager ma semaine
+      </button>
 
       <div className="grid md:grid-cols-2 gap-4 items-start">
         <Resume />
@@ -173,6 +182,7 @@ export default function HomePage() {
     </div>
     </PullToRefresh>
     {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
+    {showRecap && <WeeklyRecapModal onClose={() => setShowRecap(false)} />}
     </>
   );
 }
