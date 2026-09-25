@@ -8,6 +8,7 @@ import { Exercise } from '@/lib/types';
 import ExerciseBlockCard, { ExerciseBlockHandle } from '@/components/ExerciseBlockCard';
 import RestTimerBar from '@/components/RestTimerBar';
 import { useRestTimer } from '@/lib/useRestTimer';
+import { queueSession } from '@/lib/offlineQueue';
 
 interface PrefillBlock {
   key: string;
@@ -167,6 +168,17 @@ export default function NouvelleSeancePage() {
       })
     );
 
+    // Pas de réseau (typique en salle de sport) : on garde la séance en
+    // local plutôt que de la perdre, elle sera synchronisée automatiquement
+    // au retour de connexion (voir components/OfflineSync.tsx).
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      queueSession({ date, time: time || null, notes: notes || null, duration_minutes: duration, feeling, sets: flatSets });
+      setSaving(false);
+      alert('Pas de réseau : séance enregistrée hors-ligne, elle sera synchronisée automatiquement dès que tu seras reconnecté.');
+      router.push('/musculation');
+      return;
+    }
+
     // Détection de records : meilleur poids du jour vs meilleur poids déjà enregistré
     const exerciseIds = Array.from(new Set(flatSets.map((s) => s.exercise_id)));
     const { data: previousSets } = await supabase.from('strength_sets').select('exercise_id, weight_kg').in('exercise_id', exerciseIds);
@@ -193,8 +205,12 @@ export default function NouvelleSeancePage() {
       .single();
 
     if (error || !session) {
-      alert("Erreur lors de l'enregistrement de la séance");
+      // Le réseau se dit "en ligne" mais la requête a quand même échoué
+      // (signal instable, salle de sport) : on ne perd pas la séance.
+      queueSession({ date, time: time || null, notes: notes || null, duration_minutes: duration, feeling, sets: flatSets });
       setSaving(false);
+      alert("Connexion instable : séance enregistrée hors-ligne, elle sera synchronisée automatiquement.");
+      router.push('/musculation');
       return;
     }
 

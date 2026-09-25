@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Repeat } from 'lucide-react';
+import { CloudOff, Repeat } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { StrengthSession } from '@/lib/types';
 import SwipeToDelete from '@/components/SwipeToDelete';
 import Fab from '@/components/Fab';
 import PullToRefresh from '@/components/PullToRefresh';
+import { getQueue } from '@/lib/offlineQueue';
 
 export default function MusculationPage() {
   const [sessions, setSessions] = useState<StrengthSession[]>([]);
   const [loading, setLoading] = useState(true);
+  const [queuedCount, setQueuedCount] = useState(0);
 
   useEffect(() => {
     load();
+    setQueuedCount(getQueue().length);
   }, []);
 
   async function load() {
@@ -50,6 +53,13 @@ export default function MusculationPage() {
           <Link href="/musculation/nouvelle" className="btn-primary text-sm px-3 py-1.5">+ Nouvelle</Link>
         </div>
       </div>
+
+      {queuedCount > 0 && (
+        <div className="flex items-center gap-2 text-xs text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+          <CloudOff size={14} className="shrink-0" />
+          {queuedCount} séance{queuedCount > 1 ? 's' : ''} en attente de synchro (hors-ligne)
+        </div>
+      )}
 
       {!loading && sessions.length > 0 && (
         <Link
