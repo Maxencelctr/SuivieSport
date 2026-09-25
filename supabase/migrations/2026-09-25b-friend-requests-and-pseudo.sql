@@ -52,6 +52,9 @@ create policy "send to a friend" on challenges for insert with check (
 );
 
 -- Redeem d'un code : crée une demande "pending" au lieu d'ajouter direct.
+-- drop nécessaire : la forme de retour change (friend_email -> friend_label),
+-- "create or replace" seul refuse ce genre de changement.
+drop function if exists redeem_invite_code(text);
 create or replace function redeem_invite_code(code text)
 returns table(friend_id uuid, friend_label text)
 language plpgsql
@@ -133,6 +136,8 @@ $$;
 grant execute on function respond_friend_request(uuid, boolean) to authenticated;
 
 -- Liste des amis confirmés, avec pseudo (ou email si pas de pseudo défini).
+-- drop nécessaire : la forme de retour change (friend_email -> friend_label).
+drop function if exists get_friends();
 create or replace function get_friends()
 returns table(friend_id uuid, friend_label text)
 language plpgsql
