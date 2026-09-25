@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { ActivityLevel, NutritionGoal, Sex } from '@/lib/types';
 import { ACTIVITY_LABELS, GOAL_LABELS } from '@/lib/nutrition';
 
-type Mode = 'signin' | 'signup';
+type Mode = 'signin' | 'signup' | 'forgot';
 
 export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('signin');
@@ -33,6 +33,19 @@ export default function LoginPage() {
     e.preventDefault();
     resetMessages();
     setLoading(true);
+
+    if (mode === 'forgot') {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      setInfo('Si un compte existe avec cet email, un lien de réinitialisation vient d\'être envoyé.');
+      return;
+    }
 
     if (mode === 'signin') {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -88,26 +101,35 @@ export default function LoginPage() {
         </div>
 
         <div className="card space-y-4">
-          <div className="flex gap-1 p-1 rounded-lg bg-[#0a0a0b] border border-[#26262a]">
-            <button
-              type="button"
-              onClick={() => { setMode('signin'); resetMessages(); }}
-              className={`flex-1 text-sm py-1.5 rounded-md font-medium transition-colors ${
-                mode === 'signin' ? 'bg-accent text-white' : 'text-neutral-400'
-              }`}
-            >
-              Connexion
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode('signup'); resetMessages(); }}
-              className={`flex-1 text-sm py-1.5 rounded-md font-medium transition-colors ${
-                mode === 'signup' ? 'bg-accent text-white' : 'text-neutral-400'
-              }`}
-            >
-              Créer un compte
-            </button>
-          </div>
+          {mode !== 'forgot' && (
+            <div className="flex gap-1 p-1 rounded-lg bg-[#0a0a0b] border border-[#26262a]">
+              <button
+                type="button"
+                onClick={() => { setMode('signin'); resetMessages(); }}
+                className={`flex-1 text-sm py-1.5 rounded-md font-medium transition-colors ${
+                  mode === 'signin' ? 'bg-accent text-white' : 'text-neutral-400'
+                }`}
+              >
+                Connexion
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('signup'); resetMessages(); }}
+                className={`flex-1 text-sm py-1.5 rounded-md font-medium transition-colors ${
+                  mode === 'signup' ? 'bg-accent text-white' : 'text-neutral-400'
+                }`}
+              >
+                Créer un compte
+              </button>
+            </div>
+          )}
+
+          {mode === 'forgot' && (
+            <div>
+              <h3 className="font-medium text-sm">Mot de passe oublié</h3>
+              <p className="text-xs text-neutral-500 mt-1">On t'envoie un lien par email pour en choisir un nouveau.</p>
+            </div>
+          )}
 
           <form onSubmit={submit} className="space-y-3">
             {mode === 'signup' && (
@@ -134,17 +156,28 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <div>
-              <label className="text-xs text-neutral-500">Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                minLength={6}
-                required
-              />
-            </div>
+            {mode !== 'forgot' && (
+              <div>
+                <label className="text-xs text-neutral-500">Mot de passe</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                  minLength={6}
+                  required
+                />
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); resetMessages(); }}
+                    className="text-xs text-accent mt-1"
+                  >
+                    Mot de passe oublié ?
+                  </button>
+                )}
+              </div>
+            )}
 
             {mode === 'signup' && (
               <>
@@ -205,8 +238,24 @@ export default function LoginPage() {
             {info && <p className="text-accent text-sm">{info}</p>}
 
             <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? '...' : mode === 'signin' ? 'Se connecter' : 'Créer mon compte'}
+              {loading
+                ? '...'
+                : mode === 'signin'
+                  ? 'Se connecter'
+                  : mode === 'forgot'
+                    ? 'Envoyer le lien'
+                    : 'Créer mon compte'}
             </button>
+
+            {mode === 'forgot' && (
+              <button
+                type="button"
+                onClick={() => { setMode('signin'); resetMessages(); }}
+                className="w-full text-center text-xs text-neutral-500"
+              >
+                ← Retour à la connexion
+              </button>
+            )}
           </form>
         </div>
       </div>

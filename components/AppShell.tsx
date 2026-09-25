@@ -6,7 +6,7 @@ import OfflineSync from './OfflineSync';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage = pathname === '/login';
+  const isAuthPage = pathname === '/login' || pathname === '/reset-password';
 
   if (isAuthPage) return <>{children}</>;
 
