@@ -20,12 +20,19 @@ create index if not exists idx_friend_requests_to on friend_requests(to_user_id)
 create index if not exists idx_friend_requests_from on friend_requests(from_user_id);
 
 -- Reprend les amitiés déjà créées par l'ancien système (accès direct) comme
--- des demandes acceptées, une seule ligne par paire.
-insert into friend_requests (from_user_id, to_user_id, status, responded_at)
-select user_id, friend_id, 'accepted', now()
-from friendships
-where user_id < friend_id
-on conflict (from_user_id, to_user_id) do nothing;
+-- des demandes acceptées, une seule ligne par paire. Protégé par un test
+-- d'existence pour rester rejouable même si "friendships" a déjà été
+-- supprimée par un essai précédent de cette migration.
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_name = 'friendships') then
+    insert into friend_requests (from_user_id, to_user_id, status, responded_at)
+    select user_id, friend_id, 'accepted', now()
+    from friendships
+    where user_id < friend_id
+    on conflict (from_user_id, to_user_id) do nothing;
+  end if;
+end $$;
 
 drop policy if exists "send to a friend" on challenges;
 drop policy if exists "see own friendships" on friendships;
