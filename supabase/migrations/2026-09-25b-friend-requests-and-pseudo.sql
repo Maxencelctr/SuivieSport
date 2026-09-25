@@ -45,7 +45,9 @@ alter table friend_requests enable row level security;
 -- Lecture : les deux personnes concernées par la demande. Pas d'insert/update
 -- direct côté client : tout passe par les fonctions ci-dessous, qui
 -- valident le code / l'identité de qui répond.
+drop policy if exists "see own requests" on friend_requests;
 create policy "see own requests" on friend_requests for select using (auth.uid() in (from_user_id, to_user_id));
+drop policy if exists "remove own requests" on friend_requests;
 create policy "remove own requests" on friend_requests for delete using (auth.uid() in (from_user_id, to_user_id));
 
 -- Un défi ne peut être envoyé qu'à quelqu'un dont la demande est acceptée.
