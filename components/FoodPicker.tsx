@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ScanLine } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { CustomFood, Meal } from '@/lib/types';
+import BarcodeScanner from './BarcodeScanner';
 
 interface OffResult {
   off_code: string | null;
@@ -44,6 +46,10 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
   const [manualQuantity, setManualQuantity] = useState(100);
   const [manualProtein, setManualProtein] = useState(0);
 
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
+
   useEffect(() => {
     if (query.trim().length < 2) {
       setOffResults([]);
@@ -79,6 +85,25 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
     setPicked({ kind: 'off', food });
     setQuantity(100);
     setOpen(false);
+  }
+
+  async function handleScan(code: string) {
+    setScannerOpen(false);
+    setScanning(true);
+    setScanError(null);
+    try {
+      const res = await fetch(`/api/food/barcode?code=${encodeURIComponent(code)}`);
+      const json = await res.json();
+      if (!json.result) {
+        setScanError(json.error ?? 'Produit introuvable pour ce code-barres.');
+        return;
+      }
+      selectOff(json.result);
+    } catch {
+      setScanError('Recherche indisponible.');
+    } finally {
+      setScanning(false);
+    }
   }
 
   function preview() {
@@ -172,7 +197,9 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
 
   return (
     <div className="space-y-2">
-      <div className="relative">
+      {scannerOpen && <BarcodeScanner onScan={handleScan} onClose={() => setScannerOpen(false)} />}
+
+      <div className="relative flex gap-2">
         <input
           value={query}
           onChange={(e) => {
@@ -182,7 +209,21 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder="Rechercher un aliment (poulet, riz, whey...)"
+          className="flex-1"
         />
+        <button
+          type="button"
+          onClick={() => setScannerOpen(true)}
+          className="shrink-0 px-3 rounded-lg border border-[#262626] text-neutral-400 hover:text-accent hover:border-accent transition"
+          aria-label="Scanner un code-barres"
+        >
+          <ScanLine size={18} />
+        </button>
+      </div>
+      {scanning && <p className="text-neutral-500 text-xs">Recherche du produit...</p>}
+      {scanError && <p className="text-amber-500 text-xs">{scanError}</p>}
+
+      <div className="relative">
         {searchError && <p className="text-amber-500 text-xs mt-1">{searchError}</p>}
         {showDropdown && (
           <div className="absolute z-10 mt-1 w-full bg-[#141414] border border-[#333] rounded-lg max-h-64 overflow-y-auto">
