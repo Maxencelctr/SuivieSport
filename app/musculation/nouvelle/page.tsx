@@ -1,11 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PartyPopper, Trophy } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Exercise } from '@/lib/types';
 import ExerciseBlockCard, { ExerciseBlockHandle } from '@/components/ExerciseBlockCard';
+
+interface PrefillBlock {
+  key: string;
+  initialExercise?: Exercise | null;
+  initialRows?: { reps: number; reps_right: number; weight_kg: number }[];
+  initialUnilateral?: boolean;
+}
 
 function genKey() {
   return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
@@ -21,9 +28,14 @@ function today() {
 
 export default function NouvelleSeancePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const repeatId = searchParams.get('repeat');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [muscleNamesByExercise, setMuscleNamesByExercise] = useState<Record<string, string[]>>({});
-  const [blocks, setBlocks] = useState<{ key: string }[]>(() => [{ key: genKey() }, { key: genKey() }, { key: genKey() }]);
+  const [blocks, setBlocks] = useState<PrefillBlock[]>(() =>
+    repeatId ? [] : [{ key: genKey() }, { key: genKey() }, { key: genKey() }]
+  );
+  const [prefilling, setPrefilling] = useState(!!repeatId);
   const blockRefs = useRef<Record<string, ExerciseBlockHandle | null>>({});
 
   const [date, setDate] = useState(today);
@@ -58,6 +70,57 @@ export default function NouvelleSeancePage() {
         setMuscleNamesByExercise(map);
       });
   }, []);
+
+  // "Répéter la dernière séance" : pré-remplit les blocs avec les mêmes
+  // exercices (et le même nombre de séries) que la séance source, une fois
+  // que la bibliothèque d'exercices est chargée (pour résoudre initialExercise).
+  useEffect(() => {
+    if (!repeatId || exercises.length === 0) return;
+
+    supabase
+      .from('strength_sets')
+      .select('exercise_id, set_number, reps, weight_kg, side')
+      .eq('session_id', repeatId)
+      .order('set_number')
+      .then(({ data: sets }) => {
+        if (!sets || sets.length === 0) {
+          setBlocks([{ key: genKey() }]);
+          setPrefilling(false);
+          return;
+        }
+
+        const byExercise = new Map<string, typeof sets>();
+        sets.forEach((s) => {
+          if (!byExercise.has(s.exercise_id)) byExercise.set(s.exercise_id, []);
+          byExercise.get(s.exercise_id)!.push(s);
+        });
+
+        const newBlocks: PrefillBlock[] = Array.from(byExercise.entries()).map(([exerciseId, exSets]) => {
+          const exercise = exercises.find((e) => e.id === exerciseId) ?? null;
+          const unilateral = exSets.some((s) => s.side != null);
+
+          let rows: { reps: number; reps_right: number; weight_kg: number }[];
+          if (unilateral) {
+            const bySetNum = new Map<number, { reps: number; reps_right: number; weight_kg: number }>();
+            exSets.forEach((s) => {
+              const row = bySetNum.get(s.set_number) ?? { reps: 0, reps_right: 0, weight_kg: Number(s.weight_kg) };
+              if (s.side === 'droit') row.reps_right = s.reps;
+              else row.reps = s.reps;
+              row.weight_kg = Number(s.weight_kg);
+              bySetNum.set(s.set_number, row);
+            });
+            rows = Array.from(bySetNum.values());
+          } else {
+            rows = exSets.map((s) => ({ reps: s.reps, reps_right: s.reps, weight_kg: Number(s.weight_kg) }));
+          }
+
+          return { key: genKey(), initialExercise: exercise, initialRows: rows, initialUnilateral: unilateral };
+        });
+
+        setBlocks(newBlocks.length > 0 ? newBlocks : [{ key: genKey() }]);
+        setPrefilling(false);
+      });
+  }, [repeatId, exercises]);
 
   function addBlock() {
     setBlocks((prev) => [...prev, { key: genKey() }]);
@@ -191,6 +254,8 @@ export default function NouvelleSeancePage() {
         </div>
       </div>
 
+      {prefilling && <p className="text-neutral-500 text-sm">Reprise de la dernière séance...</p>}
+
       {blocks.map((b, i) => (
         <ExerciseBlockCard
           key={b.key}
@@ -200,6 +265,9 @@ export default function NouvelleSeancePage() {
           onExerciseAdded={onExerciseAdded}
           onRemove={() => removeBlock(b.key)}
           removable={blocks.length > 1}
+          initialExercise={b.initialExercise}
+          initialRows={b.initialRows}
+          initialUnilateral={b.initialUnilateral}
           ref={(el) => {
             blockRefs.current[b.key] = el;
           }}

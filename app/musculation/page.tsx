@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Trash2 } from 'lucide-react';
+import { Repeat } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { StrengthSession } from '@/lib/types';
+import SwipeToDelete from '@/components/SwipeToDelete';
+import Fab from '@/components/Fab';
+import PullToRefresh from '@/components/PullToRefresh';
 
 export default function MusculationPage() {
   const [sessions, setSessions] = useState<StrengthSession[]>([]);
@@ -20,15 +23,14 @@ export default function MusculationPage() {
     setLoading(false);
   }
 
-  async function deleteSession(id: string, e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+  async function deleteSession(id: string) {
     if (!confirm('Supprimer cette séance et toutes ses séries ?')) return;
     await supabase.from('strength_sessions').delete().eq('id', id);
     await load();
   }
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <h2 className="text-lg font-semibold">Séances de musculation</h2>
@@ -49,6 +51,15 @@ export default function MusculationPage() {
         </div>
       </div>
 
+      {!loading && sessions.length > 0 && (
+        <Link
+          href={`/musculation/nouvelle?repeat=${sessions[0].id}`}
+          className="flex items-center justify-center gap-2 text-sm py-2 rounded-lg border border-dashed border-[#333] text-neutral-400 hover:text-accent hover:border-accent transition"
+        >
+          <Repeat size={14} /> Répéter la dernière séance
+        </Link>
+      )}
+
       {loading && <p className="text-neutral-500">Chargement...</p>}
       {!loading && sessions.length === 0 && (
         <p className="text-neutral-500 text-sm">Aucune séance pour l'instant.</p>
@@ -56,28 +67,27 @@ export default function MusculationPage() {
 
       <div className="space-y-2">
         {sessions.map((s) => (
-          <Link key={s.id} href={`/musculation/${s.id}`} className="card block hover:border-neutral-600 transition">
-            <div className="flex justify-between items-center">
-              <div className="font-medium">
-                {new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                {s.time && <span className="text-neutral-500 font-normal"> · {s.time.slice(0, 5)}</span>}
+          <SwipeToDelete key={s.id} onDelete={() => deleteSession(s.id)}>
+            <Link href={`/musculation/${s.id}`} className="card block hover:border-neutral-600 transition">
+              <div className="flex justify-between items-center">
+                <div className="font-medium">
+                  {new Date(s.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {s.time && <span className="text-neutral-500 font-normal"> · {s.time.slice(0, 5)}</span>}
+                </div>
               </div>
-              <button
-                onClick={(e) => deleteSession(s.id, e)}
-                className="flex items-center gap-1 text-sm text-red-400/80 hover:text-red-400 shrink-0"
-              >
-                <Trash2 size={14} /> Supprimer
-              </button>
-            </div>
-            {(s.notes || s.feeling) && (
-              <div className="text-neutral-400 text-sm mt-1 flex justify-between">
-                <span>{s.notes}</span>
-                {s.feeling && <span>Ressenti: {s.feeling}/5</span>}
-              </div>
-            )}
-          </Link>
+              {(s.notes || s.feeling) && (
+                <div className="text-neutral-400 text-sm mt-1 flex justify-between">
+                  <span>{s.notes}</span>
+                  {s.feeling && <span>Ressenti: {s.feeling}/5</span>}
+                </div>
+              )}
+            </Link>
+          </SwipeToDelete>
         ))}
       </div>
+
+      <Fab href="/musculation/nouvelle" label="Nouvelle séance" />
     </div>
+    </PullToRefresh>
   );
 }

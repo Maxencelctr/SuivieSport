@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Run } from '@/lib/types';
 import { RUN_TYPE_LABELS, WEATHER_ICONS } from '@/lib/running';
+import SwipeToDelete from '@/components/SwipeToDelete';
+import Fab from '@/components/Fab';
+import PullToRefresh from '@/components/PullToRefresh';
 
 function formatPace(secondsPerKm: number) {
   const min = Math.floor(secondsPerKm / 60);
@@ -41,6 +44,7 @@ export default function CoursePage() {
   }
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
         <h2 className="text-lg font-semibold">Sorties course à pied</h2>
@@ -60,29 +64,29 @@ export default function CoursePage() {
 
       <div className="space-y-2">
         {runs.map((r) => (
-          <div key={r.id} className="card">
-            <div className="flex justify-between items-center">
-              <span className="font-medium">{new Date(r.date).toLocaleDateString('fr-FR')}</span>
-              <span className="text-xs text-neutral-500 bg-[#0a0a0a] border border-[#262626] rounded-full px-2 py-0.5">{RUN_TYPE_LABELS[r.run_type] ?? r.run_type}</span>
-              <span className="text-accent flex items-center gap-1">
-                {r.weather && WEATHER_ICONS[r.weather] && (() => { const WIcon = WEATHER_ICONS[r.weather]; return <WIcon size={14} />; })()}
-                {formatPace(r.avg_pace_seconds_per_km)} /km
-              </span>
-            </div>
-            <div className="flex justify-between items-center text-sm text-neutral-400 mt-1">
-              <span>{r.distance_km} km — {formatDuration(r.duration_seconds)}{r.elevation_gain_m ? ` — D+${r.elevation_gain_m}m` : ''}{r.feeling ? ` — ${r.feeling}` : ''}</span>
-              <span className="flex gap-3 shrink-0">
-                <Link href={`/course/${r.id}`} className="flex items-center gap-1 text-accent">
+          <SwipeToDelete key={r.id} onDelete={() => deleteRun(r.id)}>
+            <div className="card">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">{new Date(r.date).toLocaleDateString('fr-FR')}</span>
+                <span className="text-xs text-neutral-500 bg-[#0a0a0a] border border-[#262626] rounded-full px-2 py-0.5">{RUN_TYPE_LABELS[r.run_type] ?? r.run_type}</span>
+                <span className="text-accent flex items-center gap-1">
+                  {r.weather && WEATHER_ICONS[r.weather] && (() => { const WIcon = WEATHER_ICONS[r.weather]; return <WIcon size={14} />; })()}
+                  {formatPace(r.avg_pace_seconds_per_km)} /km
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-sm text-neutral-400 mt-1">
+                <span>{r.distance_km} km — {formatDuration(r.duration_seconds)}{r.elevation_gain_m ? ` — D+${r.elevation_gain_m}m` : ''}{r.feeling ? ` — ${r.feeling}` : ''}</span>
+                <Link href={`/course/${r.id}`} className="flex items-center gap-1 text-accent shrink-0">
                   <Pencil size={14} /> Modifier
                 </Link>
-                <button onClick={() => deleteRun(r.id)} className="flex items-center gap-1 text-red-400/80 hover:text-red-400">
-                  <Trash2 size={14} /> Supprimer
-                </button>
-              </span>
+              </div>
             </div>
-          </div>
+          </SwipeToDelete>
         ))}
       </div>
+
+      <Fab href="/course/nouvelle" label="Nouveau run" />
     </div>
+    </PullToRefresh>
   );
 }

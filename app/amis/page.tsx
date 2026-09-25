@@ -5,12 +5,17 @@ import { Bell, Check, Copy, Flame, Trash2, UserPlus, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { enablePushNotifications, isPushEnabled, pushSupported } from '@/lib/push';
+import { haptic } from '@/lib/haptics';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
+import PullToRefresh from '@/components/PullToRefresh';
 import { Challenge, Friend, FriendRequest } from '@/lib/types';
 
 const PRESETS = ['10 pompes maintenant', '20 squats maintenant', '30 secondes de gainage', 'Va courir 2km aujourd\'hui'];
 
 export default function AmisPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState('');
@@ -63,6 +68,7 @@ export default function AmisPage() {
   async function copyCode() {
     if (!inviteCode) return;
     await navigator.clipboard.writeText(inviteCode);
+    haptic(10);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -86,6 +92,7 @@ export default function AmisPage() {
 
   async function respondRequest(requestId: string, accept: boolean) {
     await supabase.rpc('respond_friend_request', { request_id: requestId, accept });
+    toast.trigger(accept ? 'Ami ajouté' : 'Demande refusée');
     await load();
   }
 
@@ -123,6 +130,7 @@ export default function AmisPage() {
           // pas grave si l'envoi échoue : le défi reste visible dans l'app
         });
       }
+      toast.trigger('Défi envoyé');
       await load();
     }
     setSending(false);
@@ -133,6 +141,7 @@ export default function AmisPage() {
       .from('challenges')
       .update({ status, completed_at: status === 'done' ? new Date().toISOString() : null })
       .eq('id', id);
+    if (status === 'done') toast.trigger('Défi relevé 💪');
     await load();
   }
 
@@ -155,6 +164,7 @@ export default function AmisPage() {
   if (loading) return <p className="text-neutral-500 text-sm">Chargement...</p>;
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Amis</h2>
 
@@ -340,6 +350,9 @@ export default function AmisPage() {
           ))}
         </div>
       )}
+
+      <Toast message={toast.message} show={toast.show} />
     </div>
+    </PullToRefresh>
   );
 }

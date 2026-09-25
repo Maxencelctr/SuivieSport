@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { CustomFood, FoodEntry, Meal } from '@/lib/types';
 import { MEAL_ICONS, MEAL_LABELS } from '@/lib/meals';
 import FoodPicker from './FoodPicker';
+import SwipeToDelete from './SwipeToDelete';
 
 interface MealSectionProps {
   meal: Meal;
@@ -43,17 +44,16 @@ export default function MealSection({ meal, date, entries, customFoods, onChange
       {entries.length > 0 && (
         <div className="space-y-1">
           {entries.map((e) => (
-            <div key={e.id} className="flex justify-between items-center text-sm border-b border-[#262626] py-1 last:border-0">
-              <div>
-                <div>{e.name}</div>
-                <div className="text-xs text-neutral-500">
-                  {e.quantity_g}g — {e.protein_g}g prot{e.calories_kcal ? ` — ${e.calories_kcal} kcal` : ''}
+            <SwipeToDelete key={e.id} onDelete={() => deleteEntry(e.id)}>
+              <div className="flex justify-between items-center text-sm border-b border-[#262626] py-1 last:border-0 px-0.5">
+                <div>
+                  <div>{e.name}</div>
+                  <div className="text-xs text-neutral-500">
+                    {e.quantity_g}g — {e.protein_g}g prot{e.calories_kcal ? ` — ${e.calories_kcal} kcal` : ''}
+                  </div>
                 </div>
               </div>
-              <button onClick={() => deleteEntry(e.id)} className="text-neutral-500 text-sm shrink-0 ml-2">
-                ✕
-              </button>
-            </div>
+            </SwipeToDelete>
           ))}
         </div>
       )}

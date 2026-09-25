@@ -12,7 +12,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Nav />
-      <div className="max-w-5xl mx-auto px-4 md:px-6 pb-16 pt-6">{children}</div>
+      <div className="max-w-5xl mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-16">{children}</div>
     </>
   );
 }

@@ -8,6 +8,7 @@ import { StrengthSession, Run } from '@/lib/types';
 import { RUN_TYPE_LABELS } from '@/lib/running';
 import Resume from '@/components/Resume';
 import QuickAdd from '@/components/QuickAdd';
+import PullToRefresh from '@/components/PullToRefresh';
 
 const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
   1: { icon: Angry, className: 'text-red-500' },
@@ -52,6 +53,7 @@ export default function HomePage() {
   }
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <Link href="/parametres" className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-neutral-200">
@@ -159,5 +161,6 @@ export default function HomePage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }

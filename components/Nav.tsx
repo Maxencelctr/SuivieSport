@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LogOut, Menu, X } from 'lucide-react';
+import { Dumbbell, Footprints, Home, LogOut, Menu, Users, Utensils, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { signOutAndClear } from '@/lib/auth';
+import { haptic } from '@/lib/haptics';
 import { useAuth } from './AuthProvider';
 
 const links = [
@@ -19,6 +20,16 @@ const links = [
   { href: '/amis', label: 'Amis' },
   { href: '/stats', label: 'Stats' },
   { href: '/profil', label: 'Profil' },
+];
+
+// Les 5 sections les plus utilisées, en accès direct au pouce sur mobile
+// (barre fixe en bas, façon Strava/Instagram) — le reste passe par le burger.
+const BOTTOM_TABS = [
+  { href: '/', label: 'Accueil', icon: Home },
+  { href: '/musculation', label: 'Muscu', icon: Dumbbell },
+  { href: '/course', label: 'Course', icon: Footprints },
+  { href: '/alimentation', label: 'Manger', icon: Utensils },
+  { href: '/amis', label: 'Amis', icon: Users },
 ];
 
 export default function Nav() {
@@ -55,6 +66,7 @@ export default function Nav() {
   }, [open]);
 
   return (
+    <>
     <header className="sticky top-0 z-30 bg-[#0a0a0b]/95 backdrop-blur border-b border-[#1e1e21]">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="relative flex items-center h-14 gap-2">
@@ -144,5 +156,35 @@ export default function Nav() {
         </div>
       )}
     </header>
+
+    {/* Barre de navigation fixe en bas, mobile uniquement. */}
+    <nav
+      className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[#0a0a0b]/95 backdrop-blur border-t border-[#1e1e21] flex items-stretch"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {BOTTOM_TABS.map((tab) => {
+        const active = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href);
+        const Icon = tab.icon;
+        return (
+          <Link
+            key={tab.href}
+            href={tab.href}
+            onClick={() => haptic(8)}
+            className={`relative flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+              active ? 'text-accent' : 'text-neutral-500'
+            }`}
+          >
+            <Icon size={20} />
+            {tab.label}
+            {tab.href === '/amis' && pendingChallenges > 0 && (
+              <span className="absolute top-1 right-[22%] min-w-[15px] h-[15px] px-0.5 rounded-full bg-accent text-white text-[9px] font-semibold flex items-center justify-center">
+                {pendingChallenges}
+              </span>
+            )}
+          </Link>
+        );
+      })}
+    </nav>
+    </>
   );
 }
