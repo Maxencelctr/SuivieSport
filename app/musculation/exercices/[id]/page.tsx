@@ -60,6 +60,12 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
     setSavingDesc(false);
   }
 
+  async function toggleAssisted() {
+    if (!exercise) return;
+    await supabase.from('exercises').update({ is_assisted: !exercise.is_assisted }).eq('id', id);
+    await load();
+  }
+
   async function toggleMuscle(muscleId: string, role: 'primaire' | 'secondaire') {
     const isPrimary = primaryIds.has(muscleId);
     const isSecondary = secondaryIds.has(muscleId);
@@ -126,7 +132,10 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
   });
   const sessions = Object.values(bySession).sort((a, b) => b.date.localeCompare(a.date));
 
-  const maxWeight = sets.reduce((max, s) => Math.max(max, Number(s.weight_kg)), 0);
+  const weights = sets.map((s) => Number(s.weight_kg));
+  const bestWeight = exercise.is_assisted
+    ? weights.length > 0 ? Math.min(...weights) : 0
+    : weights.reduce((max, w) => Math.max(max, w), 0);
   const totalSets = sets.length;
   const hasMuscles = primaryIds.size > 0 || secondaryIds.size > 0;
 
@@ -149,8 +158,8 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
 
       <div className="card flex justify-around text-center">
         <div>
-          <div className="text-xl font-bold text-accent">{maxWeight}kg</div>
-          <div className="text-xs text-neutral-500">Charge max</div>
+          <div className="text-xl font-bold text-accent">{bestWeight}kg</div>
+          <div className="text-xs text-neutral-500">{exercise.is_assisted ? 'Assistance mini' : 'Charge max'}</div>
         </div>
         <div>
           <div className="text-xl font-bold">{totalSets}</div>
@@ -160,6 +169,13 @@ export default function ExerciseDetailPage({ params }: { params: Promise<{ id: s
           <div className="text-xl font-bold capitalize">{exercise.muscle_group}</div>
           <div className="text-xs text-neutral-500">Catégorie</div>
         </div>
+      </div>
+
+      <div className="card space-y-2">
+        <label className="flex items-center gap-2 text-sm text-neutral-400">
+          <input type="checkbox" checked={exercise.is_assisted} onChange={toggleAssisted} className="w-auto" />
+          Exercice assisté (moins de poids = mieux — tractions/dips assistés...)
+        </label>
       </div>
 
       <div className="card space-y-2">

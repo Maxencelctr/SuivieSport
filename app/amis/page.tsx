@@ -24,9 +24,12 @@ const DUEL_METRIC_LABELS: Record<DuelMetric, string> = {
   sessions: 'Nombre de séances',
 };
 
+type Tab = 'amis' | 'defis' | 'duels' | 'classement';
+
 export default function AmisPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const [tab, setTab] = useState<Tab>('amis');
   const [loading, setLoading] = useState(true);
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState('');
@@ -387,7 +390,39 @@ export default function AmisPage() {
         </div>
       )}
 
-      {requests.length > 0 && (
+      {(() => {
+        const pendingRequests = requests.length;
+        const pendingChallenges = received.filter((c) => c.status === 'pending').length;
+        const pendingDuels = duels.filter((d) => d.status === 'pending' && d.opponent_id === user?.id).length;
+        const TABS: { key: Tab; label: string; badge: number }[] = [
+          { key: 'amis', label: 'Amis', badge: pendingRequests },
+          { key: 'defis', label: 'Défis', badge: pendingChallenges },
+          { key: 'duels', label: 'Duels', badge: pendingDuels },
+          { key: 'classement', label: 'Classement', badge: 0 },
+        ];
+        return (
+          <div className="flex gap-1 p-1 rounded-lg bg-[#0a0a0b] border border-[#26262a] overflow-x-auto">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex-1 shrink-0 flex items-center justify-center gap-1.5 text-xs px-2 py-1.5 rounded-md font-medium transition-colors ${
+                  tab === t.key ? 'bg-accent text-white' : 'text-neutral-400'
+                }`}
+              >
+                {t.label}
+                {t.badge > 0 && (
+                  <span className="min-w-[15px] h-[15px] px-0.5 rounded-full bg-white/20 text-[10px] flex items-center justify-center">
+                    {t.badge}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
+
+      {tab === 'amis' && requests.length > 0 && (
         <div className="space-y-2">
           <h3 className="eyebrow">Demandes d'amis</h3>
           {requests.map((r) => (
@@ -415,7 +450,7 @@ export default function AmisPage() {
         </div>
       )}
 
-      {received.filter((c) => c.status === 'pending').length > 0 && (
+      {tab === 'defis' && received.filter((c) => c.status === 'pending').length > 0 && (
         <div className="space-y-2">
           <h3 className="eyebrow">Défis reçus</h3>
           {received
@@ -456,6 +491,7 @@ export default function AmisPage() {
         </div>
       )}
 
+      {tab === 'amis' && (
       <div className="card space-y-3">
         <h3 className="eyebrow">Ton code d'invitation</h3>
         <div className="flex items-center gap-2">
@@ -468,7 +504,9 @@ export default function AmisPage() {
         </div>
         <p className="text-xs text-neutral-500">Partage ce code à un ami pour qu'il t'ajoute.</p>
       </div>
+      )}
 
+      {tab === 'amis' && (
       <div className="card space-y-3">
         <h3 className="eyebrow">Ajouter un ami</h3>
         <div className="flex gap-2">
@@ -485,7 +523,9 @@ export default function AmisPage() {
         {redeemError && <p className="text-red-400 text-sm">{redeemError}</p>}
         {redeemSuccess && <p className="text-accent text-sm">{redeemSuccess}</p>}
       </div>
+      )}
 
+      {tab === 'amis' && (
       <div className="space-y-2">
         <h3 className="eyebrow">Mes amis {friends.length > 0 ? `(${friends.length})` : ''}</h3>
         {friends.length === 0 && <p className="text-neutral-500 text-sm">Aucun ami pour l'instant.</p>}
@@ -504,8 +544,13 @@ export default function AmisPage() {
           </div>
         ))}
       </div>
+      )}
 
-      {friends.length > 0 && (
+      {tab === 'classement' && friends.length === 0 && (
+        <p className="text-neutral-500 text-sm">Ajoute d'abord un ami pour voir un classement.</p>
+      )}
+
+      {tab === 'classement' && friends.length > 0 && (
         <div className="card space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="eyebrow flex items-center gap-1.5">
@@ -554,7 +599,7 @@ export default function AmisPage() {
         </div>
       )}
 
-      {duels.some((d) => d.status === 'pending' && d.opponent_id === user?.id) && (
+      {tab === 'duels' && duels.some((d) => d.status === 'pending' && d.opponent_id === user?.id) && (
         <div className="space-y-2">
           <h3 className="eyebrow">Duels proposés</h3>
           {duels
@@ -589,7 +634,7 @@ export default function AmisPage() {
         </div>
       )}
 
-      {duels.some((d) => d.status === 'active') && (
+      {tab === 'duels' && duels.some((d) => d.status === 'active') && (
         <div className="space-y-2">
           <h3 className="eyebrow flex items-center gap-1.5">
             <Swords size={13} className="text-accent" /> Duels en cours
@@ -625,7 +670,11 @@ export default function AmisPage() {
         </div>
       )}
 
-      {friends.length > 0 && (
+      {tab === 'duels' && friends.length === 0 && (
+        <p className="text-neutral-500 text-sm">Ajoute d'abord un ami (onglet "Amis") pour lancer un duel.</p>
+      )}
+
+      {tab === 'duels' && friends.length > 0 && (
         <div className="card space-y-3">
           <h3 className="eyebrow flex items-center gap-1.5">
             <Swords size={13} className="text-accent" /> Lancer un duel
@@ -664,7 +713,11 @@ export default function AmisPage() {
         </div>
       )}
 
-      {friends.length > 0 && (
+      {tab === 'defis' && friends.length === 0 && (
+        <p className="text-neutral-500 text-sm">Ajoute d'abord un ami (onglet "Amis") pour lui envoyer un défi.</p>
+      )}
+
+      {tab === 'defis' && friends.length > 0 && (
         <div className="card space-y-3">
           <h3 className="eyebrow">Envoyer un défi</h3>
           <div>
@@ -711,7 +764,7 @@ export default function AmisPage() {
         </div>
       )}
 
-      {sent.length > 0 && (
+      {tab === 'defis' && sent.length > 0 && (
         <div className="space-y-2">
           <h3 className="eyebrow">Défis envoyés</h3>
           {sent.slice(0, 10).map((c) => (

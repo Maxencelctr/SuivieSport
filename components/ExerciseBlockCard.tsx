@@ -134,10 +134,14 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
   }
 
+  // Exercice assisté (traction/dips assistés) : moins de poids = plus dur,
+  // donc la progression logique est de RÉDUIRE l'assistance, pas l'augmenter.
+  const weightStep = exercise?.is_assisted ? -2.5 : 2.5;
+
   function applySuggestion(type: 'weight' | 'reps') {
     if (!suggestion) return;
     const newReps = type === 'reps' ? suggestion.reps + 1 : suggestion.reps;
-    const newWeight = type === 'weight' ? Math.round((suggestion.weight + 2.5) * 2) / 2 : suggestion.weight;
+    const newWeight = type === 'weight' ? Math.max(0, Math.round((suggestion.weight + weightStep) * 2) / 2) : suggestion.weight;
     setRows(rows.map(() => ({ reps: newReps, reps_right: newReps, weight_kg: newWeight })));
   }
 
@@ -191,7 +195,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
                   onClick={() => applySuggestion('weight')}
                   className="flex-1 text-xs py-1.5 rounded bg-accent text-white font-semibold"
                 >
-                  +2.5kg → {Math.round((suggestion.weight + 2.5) * 2) / 2}kg x{suggestion.reps}
+                  {weightStep > 0 ? '+2.5kg' : '−2.5kg'} → {Math.max(0, Math.round((suggestion.weight + weightStep) * 2) / 2)}kg x{suggestion.reps}
                 </button>
                 <button
                   onClick={() => applySuggestion('reps')}

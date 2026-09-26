@@ -183,18 +183,34 @@ export default function NouvelleSeancePage() {
     const exerciseIds = Array.from(new Set(flatSets.map((s) => s.exercise_id)));
     const { data: previousSets } = await supabase.from('strength_sets').select('exercise_id, weight_kg').in('exercise_id', exerciseIds);
 
-    const previousMax: Record<string, number> = {};
+    const assistedById = new Map(results.map((r) => [r.exercise.id, r.exercise.is_assisted]));
+    const previousBest: Record<string, number> = {};
     (previousSets ?? []).forEach((s: any) => {
-      previousMax[s.exercise_id] = Math.max(previousMax[s.exercise_id] ?? 0, Number(s.weight_kg));
+      const assisted = assistedById.get(s.exercise_id);
+      const w = Number(s.weight_kg);
+      if (previousBest[s.exercise_id] == null) {
+        previousBest[s.exercise_id] = w;
+      } else {
+        previousBest[s.exercise_id] = assisted
+          ? Math.min(previousBest[s.exercise_id], w)
+          : Math.max(previousBest[s.exercise_id], w);
+      }
     });
 
     const exerciseNameById = new Map(results.map((r) => [r.exercise.id, r.exercise.name]));
     const newPRs: string[] = [];
     exerciseIds.forEach((exId) => {
-      const todayMax = Math.max(...flatSets.filter((s) => s.exercise_id === exId).map((s) => s.weight_kg));
-      const prevMax = previousMax[exId] ?? 0;
-      if (todayMax > prevMax) {
-        newPRs.push(`${exerciseNameById.get(exId)} : ${todayMax}kg${prevMax > 0 ? ` (précédent : ${prevMax}kg)` : ''}`);
+      const assisted = assistedById.get(exId);
+      const todaysWeights = flatSets.filter((s) => s.exercise_id === exId).map((s) => s.weight_kg);
+      // Assisté : la meilleure série du jour est celle avec le MOINS d'assistance.
+      const todayBest = assisted ? Math.min(...todaysWeights) : Math.max(...todaysWeights);
+      // Première fois sur cet exercice : pas de référence, ça compte quand
+      // même comme un record (comportement d'origine, encourageant).
+      const hasPrevious = previousBest[exId] != null;
+      const prevBest = previousBest[exId] ?? (assisted ? Infinity : 0);
+      const isRecord = assisted ? todayBest < prevBest : todayBest > prevBest;
+      if (isRecord) {
+        newPRs.push(`${exerciseNameById.get(exId)} : ${todayBest}kg${hasPrevious ? ` (précédent : ${prevBest}kg)` : ''}`);
       }
     });
 

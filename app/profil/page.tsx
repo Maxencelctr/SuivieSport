@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Calendar, LogOut, Settings, Target, TrendingUp } from 'lucide-react';
+import { Bell, Calendar, LogOut, Settings, Target, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { signOutAndClear } from '@/lib/auth';
@@ -24,6 +24,16 @@ const SECTIONS = [
   { href: '/parametres', label: 'Paramètres', icon: Settings },
 ];
 
+const WEEKDAYS = [
+  { value: 1, label: 'Lundi' },
+  { value: 2, label: 'Mardi' },
+  { value: 3, label: 'Mercredi' },
+  { value: 4, label: 'Jeudi' },
+  { value: 5, label: 'Vendredi' },
+  { value: 6, label: 'Samedi' },
+  { value: 0, label: 'Dimanche' },
+];
+
 export default function ProfilPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -40,6 +50,10 @@ export default function ProfilPage() {
   const [activity, setActivity] = useState<ActivityLevel>('modere');
   const [goal, setGoal] = useState<NutritionGoal>('maintien');
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
+  const [morningMotivation, setMorningMotivation] = useState(true);
+  const [supplementReminder, setSupplementReminder] = useState(true);
+  const [schedule, setSchedule] = useState<Record<number, string>>({});
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   useEffect(() => {
     supabase.from('profile').select('*').maybeSingle().then(({ data }) => {
@@ -53,10 +67,33 @@ export default function ProfilPage() {
         if (data.activity_level) setActivity(data.activity_level);
         if (data.goal) setGoal(data.goal);
         if (data.unit_system) setUnitSystem(data.unit_system);
+        if (data.morning_motivation_enabled != null) setMorningMotivation(data.morning_motivation_enabled);
+        if (data.supplement_reminder_enabled != null) setSupplementReminder(data.supplement_reminder_enabled);
       }
       setLoading(false);
     });
+
+    supabase.from('workout_schedule').select('weekday, time').then(({ data }) => {
+      const map: Record<number, string> = {};
+      (data ?? []).forEach((row: any) => {
+        if (row.time) map[row.weekday] = row.time.slice(0, 5);
+      });
+      setSchedule(map);
+    });
   }, []);
+
+  async function saveSchedule() {
+    setSavingSchedule(true);
+    const rows = Object.entries(schedule)
+      .filter(([, time]) => time)
+      .map(([weekday, time]) => ({ weekday: Number(weekday), time }));
+
+    await supabase.from('workout_schedule').delete().neq('weekday', -1);
+    if (rows.length > 0) await supabase.from('workout_schedule').insert(rows);
+
+    setSavingSchedule(false);
+    toast.trigger('Créneaux enregistrés');
+  }
 
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -84,6 +121,8 @@ export default function ProfilPage() {
       activity_level: activity,
       goal,
       unit_system: unitSystem,
+      morning_motivation_enabled: morningMotivation,
+      supplement_reminder_enabled: supplementReminder,
       updated_at: new Date().toISOString(),
     });
     setSaving(false);
@@ -223,6 +262,42 @@ export default function ProfilPage() {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="card space-y-3">
+        <h3 className="text-sm font-medium flex items-center gap-1.5">
+          <Bell size={14} className="text-accent" /> Notifications
+        </h3>
+        <label className="flex items-center justify-between text-sm">
+          <span className="text-neutral-300">Message de motivation le matin (~9h)</span>
+          <input type="checkbox" checked={morningMotivation} onChange={(e) => setMorningMotivation(e.target.checked)} className="w-auto" />
+        </label>
+        <label className="flex items-center justify-between text-sm">
+          <span className="text-neutral-300">Rappel compléments non pris (~20h)</span>
+          <input type="checkbox" checked={supplementReminder} onChange={(e) => setSupplementReminder(e.target.checked)} className="w-auto" />
+        </label>
+      </div>
+
+      <div className="card space-y-3">
+        <h3 className="text-sm font-medium">Créneaux d'entraînement habituels</h3>
+        <p className="text-[11px] text-neutral-600">
+          Sert juste à personnaliser le message du matin ("tu as séance aujourd'hui") — laisse vide les jours sans séance prévue.
+        </p>
+        <div className="space-y-1.5">
+          {WEEKDAYS.map((d) => (
+            <div key={d.value} className="flex items-center gap-2">
+              <span className="text-xs text-neutral-400 w-20 shrink-0">{d.label}</span>
+              <input
+                type="time"
+                value={schedule[d.value] ?? ''}
+                onChange={(e) => setSchedule((prev) => ({ ...prev, [d.value]: e.target.value }))}
+              />
+            </div>
+          ))}
+        </div>
+        <button onClick={saveSchedule} disabled={savingSchedule} className="btn-primary w-full text-sm py-1.5">
+          {savingSchedule ? '...' : 'Enregistrer les créneaux'}
+        </button>
       </div>
 
       <div className="card space-y-2">

@@ -37,6 +37,8 @@ export default function AlimentationPage() {
   const [supplements, setSupplements] = useState<Supplement[]>([]);
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
   const [newSupplement, setNewSupplement] = useState('');
+  const [enabledSupplements, setEnabledSupplements] = useState<Set<string>>(new Set());
+  const [manageSupplements, setManageSupplements] = useState(false);
 
   useEffect(() => {
     loadEntries(date);
@@ -79,7 +81,19 @@ export default function AlimentationPage() {
     supabase.from('supplements').select('*').order('name').then(({ data }) => {
       setSupplements(data ?? []);
     });
+    loadEnabledSupplements();
   }, []);
+
+  async function loadEnabledSupplements() {
+    const { data } = await supabase.from('user_supplements').select('supplement_name').eq('enabled', true);
+    setEnabledSupplements(new Set((data ?? []).map((r) => r.supplement_name)));
+  }
+
+  async function toggleSupplementEnabled(name: string) {
+    const enabled = !enabledSupplements.has(name);
+    await supabase.from('user_supplements').upsert({ supplement_name: name, enabled }, { onConflict: 'user_id,supplement_name' });
+    await loadEnabledSupplements();
+  }
 
   async function loadSupplementLogs(d: string) {
     const { data } = await supabase.from('supplement_logs').select('*').eq('date', d);
@@ -101,9 +115,13 @@ export default function AlimentationPage() {
     if (!name) return;
     const { error } = await supabase.from('supplements').insert({ name });
     if (!error) {
+      // Celui qui ajoute un complément veut évidemment le suivre — les
+      // autres utilisateurs restent à "non suivi" par défaut.
+      await supabase.from('user_supplements').upsert({ supplement_name: name, enabled: true }, { onConflict: 'user_id,supplement_name' });
       setNewSupplement('');
       const { data } = await supabase.from('supplements').select('*').order('name');
       setSupplements(data ?? []);
+      await loadEnabledSupplements();
     }
   }
 
@@ -451,24 +469,57 @@ export default function AlimentationPage() {
       )}
 
       <div className="card space-y-2">
-        <div className="text-sm text-neutral-400 flex items-center gap-1.5">
-          <Pill size={14} /> Suppléments
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-neutral-400 flex items-center gap-1.5">
+            <Pill size={14} /> Suppléments
+          </div>
+          <button onClick={() => setManageSupplements((v) => !v)} className="text-xs text-accent">
+            {manageSupplements ? 'Terminé' : 'Gérer'}
+          </button>
         </div>
-        <div className="space-y-1">
-          {supplements.map((s) => {
-            const taken = supplementLogs.some((l) => l.supplement_name === s.name);
-            return (
-              <button key={s.name} onClick={() => toggleSupplement(s.name)} className="w-full flex items-center justify-between py-1.5">
-                <span className={taken ? 'text-neutral-200' : 'text-neutral-500'}>{s.name}</span>
-                <span
-                  className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${taken ? 'bg-accent border-accent text-white' : 'border-[#333]'}`}
-                >
-                  {taken && <Check size={12} />}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+
+        {manageSupplements ? (
+          <div className="space-y-1">
+            <p className="text-[11px] text-neutral-600">
+              Coche ceux que tu prends réellement — les autres ne t'encombreront pas la liste du jour (ni les rappels).
+            </p>
+            {supplements.map((s) => {
+              const enabled = enabledSupplements.has(s.name);
+              return (
+                <button key={s.name} onClick={() => toggleSupplementEnabled(s.name)} className="w-full flex items-center justify-between py-1.5">
+                  <span className={enabled ? 'text-neutral-200' : 'text-neutral-500'}>{s.name}</span>
+                  <span
+                    className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${enabled ? 'bg-accent border-accent text-white' : 'border-[#333]'}`}
+                  >
+                    {enabled && <Check size={12} />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {supplements.filter((s) => enabledSupplements.has(s.name)).length === 0 && (
+              <p className="text-neutral-500 text-xs">Aucun complément suivi — clique "Gérer" pour en activer.</p>
+            )}
+            {supplements
+              .filter((s) => enabledSupplements.has(s.name))
+              .map((s) => {
+                const taken = supplementLogs.some((l) => l.supplement_name === s.name);
+                return (
+                  <button key={s.name} onClick={() => toggleSupplement(s.name)} className="w-full flex items-center justify-between py-1.5">
+                    <span className={taken ? 'text-neutral-200' : 'text-neutral-500'}>{s.name}</span>
+                    <span
+                      className={`w-5 h-5 rounded border flex items-center justify-center text-xs ${taken ? 'bg-accent border-accent text-white' : 'border-[#333]'}`}
+                    >
+                      {taken && <Check size={12} />}
+                    </span>
+                  </button>
+                );
+              })}
+          </div>
+        )}
+
         <div className="flex gap-2 pt-1">
           <input
             value={newSupplement}

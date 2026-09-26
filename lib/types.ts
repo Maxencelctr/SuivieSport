@@ -5,6 +5,7 @@ export interface Exercise {
   description: string | null;
   wger_id: number | null;
   image_url: string | null;
+  is_assisted: boolean;
   created_at: string;
 }
 
@@ -121,6 +122,8 @@ export interface Profile {
   vma_kmh: number | null;
   water_goal_ml: number | null;
   unit_system: 'metric' | 'imperial';
+  morning_motivation_enabled: boolean;
+  supplement_reminder_enabled: boolean;
   updated_at: string;
 }
 
