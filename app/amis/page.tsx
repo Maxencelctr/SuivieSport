@@ -35,6 +35,27 @@ export default function AmisPage() {
   const [selectedFriend, setSelectedFriend] = useState('');
   const [message, setMessage] = useState(PRESETS[0]);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sendSuccess, setSendSuccess] = useState<string | null>(null);
+
+  const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+  function cooldownRemaining(friendId: string): number {
+    const lastSent = sent
+      .filter((c) => c.to_user_id === friendId)
+      .map((c) => new Date(c.created_at).getTime())
+      .sort((a, b) => b - a)[0];
+    if (!lastSent) return 0;
+    return Math.max(0, COOLDOWN_MS - (Date.now() - lastSent));
+  }
+
+  function formatRemaining(ms: number): string {
+    const hours = Math.floor(ms / (60 * 60 * 1000));
+    const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+    return hours > 0 ? `${hours}h${minutes.toString().padStart(2, '0')}` : `${minutes}min`;
+  }
+
+  const selectedCooldown = selectedFriend ? cooldownRemaining(selectedFriend) : 0;
 
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
@@ -111,19 +132,41 @@ export default function AmisPage() {
   async function sendChallenge() {
     if (!selectedFriend || !message.trim() || !user) return;
     setSending(true);
+    setSendError(null);
+    setSendSuccess(null);
+
+    const cooldown = cooldownRemaining(selectedFriend);
+    if (cooldown > 0) {
+      setSendError(`Tu as déjà défié ${friendLabel(selectedFriend)} récemment. Réessaie dans ${formatRemaining(cooldown)}.`);
+      setSending(false);
+      return;
+    }
 
     const { error } = await supabase.from('challenges').insert({
       to_user_id: selectedFriend,
       message: message.trim(),
     });
 
-    if (!error) {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (accessToken) {
+    if (error) {
+      setSendError(
+        error.message.includes('row-level security')
+          ? `Tu as déjà défié ${friendLabel(selectedFriend)} il y a moins de 24h.`
+          : error.message
+      );
+      setSending(false);
+      return;
+    }
+
+    const sentToLabel = friendLabel(selectedFriend);
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    let pushSent = false;
+    if (accessToken) {
+      try {
         const { data: myProfile } = await supabase.from('profile').select('pseudo, email').maybeSingle();
         const fromLabel = myProfile?.pseudo ?? myProfile?.email ?? user.email;
-        fetch('/api/push/send', {
+        const res = await fetch('/api/push/send', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -132,13 +175,25 @@ export default function AmisPage() {
             title: `Défi de ${fromLabel}`,
             body: message.trim(),
           }),
-        }).catch(() => {
-          // pas grave si l'envoi échoue : le défi reste visible dans l'app
         });
+        if (res.ok) {
+          const json = await res.json();
+          pushSent = (json.sent ?? 0) > 0;
+        } else {
+          console.error('push send failed', await res.text());
+        }
+      } catch (err) {
+        // Le défi reste visible dans l'app même si la notif échoue (pas de
+        // réseau, ami sans notifs activées...) — on logge pour débug.
+        console.error('push send error', err);
       }
-      toast.trigger('Défi envoyé');
-      await load();
     }
+
+    toast.trigger('Défi envoyé');
+    setSendSuccess(
+      pushSent ? `Défi envoyé à ${sentToLabel}, notification reçue.` : `Défi envoyé à ${sentToLabel}.`
+    );
+    await load();
     setSending(false);
   }
 
@@ -372,9 +427,18 @@ export default function AmisPage() {
             ))}
           </div>
           <input value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Message du défi" />
+
+          {selectedCooldown > 0 && (
+            <p className="text-amber-500 text-xs">
+              Tu as déjà défié {friendLabel(selectedFriend)} récemment — réessaie dans {formatRemaining(selectedCooldown)}.
+            </p>
+          )}
+          {sendError && <p className="text-red-400 text-sm">{sendError}</p>}
+          {sendSuccess && <p className="text-accent text-sm">✓ {sendSuccess}</p>}
+
           <button
             onClick={sendChallenge}
-            disabled={sending || !selectedFriend || !message.trim()}
+            disabled={sending || !selectedFriend || !message.trim() || selectedCooldown > 0}
             className="btn-primary w-full"
           >
             {sending ? 'Envoi...' : 'Envoyer le défi'}
