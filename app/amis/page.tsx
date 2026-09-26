@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Bell, Check, Copy, Flame, Trash2, Trophy, UserPlus, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, Camera, Check, Copy, Flame, Swords, Trash2, Trophy, UserPlus, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { enablePushNotifications, isPushEnabled, pushSupported } from '@/lib/push';
@@ -9,10 +9,18 @@ import { haptic } from '@/lib/haptics';
 import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
 import PullToRefresh from '@/components/PullToRefresh';
-import { Challenge, Friend, FriendRequest, LeaderboardEntry } from '@/lib/types';
+import { Challenge, Duel, DuelMetric, Friend, FriendRequest, LeaderboardEntry, ReactionSummary } from '@/lib/types';
 import Avatar from '@/components/Avatar';
+import ReactionBar from '@/components/ReactionBar';
+import { uploadChallengeProof } from '@/lib/challengeProof';
 
 const PRESETS = ['10 pompes maintenant', '20 squats maintenant', '30 secondes de gainage', 'Va courir 2km aujourd\'hui'];
+
+const DUEL_METRIC_LABELS: Record<DuelMetric, string> = {
+  km: 'Km courus',
+  volume: 'Volume soulevé (kg)',
+  sessions: 'Nombre de séances',
+};
 
 export default function AmisPage() {
   const { user } = useAuth();
@@ -29,6 +37,7 @@ export default function AmisPage() {
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [received, setReceived] = useState<Challenge[]>([]);
   const [sent, setSent] = useState<Challenge[]>([]);
+  const [challengeReactions, setChallengeReactions] = useState<Record<string, ReactionSummary[]>>({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [leaderboardMetric, setLeaderboardMetric] = useState<'volume_7j' | 'km_7j'>('volume_7j');
 
@@ -61,6 +70,17 @@ export default function AmisPage() {
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
 
+  const [duels, setDuels] = useState<Duel[]>([]);
+  const [duelOpponent, setDuelOpponent] = useState('');
+  const [duelMetric, setDuelMetric] = useState<DuelMetric>('km');
+  const [duelDays, setDuelDays] = useState(7);
+  const [creatingDuel, setCreatingDuel] = useState(false);
+  const [duelError, setDuelError] = useState<string | null>(null);
+
+  const [uploadingProofFor, setUploadingProofFor] = useState<string | null>(null);
+  const proofInputRef = useRef<HTMLInputElement>(null);
+  const pendingProofChallenge = useRef<string | null>(null);
+
   useEffect(() => {
     if (pushSupported()) isPushEnabled().then(setPushEnabled);
   }, []);
@@ -72,24 +92,82 @@ export default function AmisPage() {
 
   async function load() {
     setLoading(true);
-    const [{ data: profile }, { data: friendsData }, { data: requestsData }, { data: challengesData }, { data: leaderboardData }] =
-      await Promise.all([
-        supabase.from('profile').select('invite_code').maybeSingle(),
-        supabase.rpc('get_friends'),
-        supabase.rpc('get_friend_requests'),
-        supabase.from('challenges').select('*').order('created_at', { ascending: false }),
-        supabase.rpc('get_friends_leaderboard'),
-      ]);
+    const [
+      { data: profile },
+      { data: friendsData },
+      { data: requestsData },
+      { data: challengesData },
+      { data: leaderboardData },
+      { data: duelsData },
+    ] = await Promise.all([
+      supabase.from('profile').select('invite_code').maybeSingle(),
+      supabase.rpc('get_friends'),
+      supabase.rpc('get_friend_requests'),
+      supabase.from('challenges').select('*').order('created_at', { ascending: false }),
+      supabase.rpc('get_friends_leaderboard'),
+      supabase.rpc('get_my_duels'),
+    ]);
 
     setInviteCode(profile?.invite_code ?? null);
     setFriends(friendsData ?? []);
     setRequests(requestsData ?? []);
     setLeaderboard(leaderboardData ?? []);
+    setDuels(duelsData ?? []);
 
     const all = (challengesData ?? []) as Challenge[];
     setReceived(all.filter((c) => c.to_user_id === user?.id));
-    setSent(all.filter((c) => c.from_user_id === user?.id));
+    const sentChallenges = all.filter((c) => c.from_user_id === user?.id);
+    setSent(sentChallenges);
+
+    const doneIds = sentChallenges.filter((c) => c.status === 'done').map((c) => c.id);
+    if (doneIds.length > 0) {
+      const { data: reactionRows } = await supabase
+        .from('activity_reactions')
+        .select('activity_id, emoji, user_id')
+        .eq('activity_type', 'challenge')
+        .in('activity_id', doneIds);
+
+      const byChallenge: Record<string, ReactionSummary[]> = {};
+      (reactionRows ?? []).forEach((row: any) => {
+        const list = (byChallenge[row.activity_id] ??= []);
+        let entry = list.find((r) => r.emoji === row.emoji);
+        if (!entry) {
+          entry = { emoji: row.emoji, count: 0, reacted_by_me: false };
+          list.push(entry);
+        }
+        entry.count++;
+        if (row.user_id === user?.id) entry.reacted_by_me = true;
+      });
+      setChallengeReactions(byChallenge);
+    } else {
+      setChallengeReactions({});
+    }
+
     setLoading(false);
+  }
+
+  async function createDuel() {
+    if (!duelOpponent) return;
+    setCreatingDuel(true);
+    setDuelError(null);
+    const { error } = await supabase.rpc('create_duel', {
+      p_opponent_id: duelOpponent,
+      p_metric: duelMetric,
+      p_days: duelDays,
+    });
+    setCreatingDuel(false);
+    if (error) {
+      setDuelError(error.message);
+      return;
+    }
+    toast.trigger('Duel proposé');
+    await load();
+  }
+
+  async function respondDuel(duelId: string, accept: boolean) {
+    await supabase.rpc('respond_duel', { p_duel_id: duelId, p_accept: accept });
+    toast.trigger(accept ? 'Duel accepté 🔥' : 'Duel refusé');
+    await load();
   }
 
   async function copyCode() {
@@ -197,13 +275,60 @@ export default function AmisPage() {
     setSending(false);
   }
 
-  async function updateChallenge(id: string, status: 'done' | 'dismissed') {
+  async function updateChallenge(id: string, status: 'done' | 'dismissed', proofUrl?: string) {
+    const challenge = received.find((c) => c.id === id);
     await supabase
       .from('challenges')
-      .update({ status, completed_at: status === 'done' ? new Date().toISOString() : null })
+      .update({
+        status,
+        completed_at: status === 'done' ? new Date().toISOString() : null,
+        proof_url: proofUrl ?? null,
+      })
       .eq('id', id);
-    if (status === 'done') toast.trigger('Défi relevé 💪');
+
+    if (status === 'done') {
+      toast.trigger('Défi relevé 💪');
+      // Prévient celui qui a envoyé le défi.
+      if (challenge && user) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (accessToken) {
+          const { data: myProfile } = await supabase.from('profile').select('pseudo, email').maybeSingle();
+          const myLabel = myProfile?.pseudo ?? myProfile?.email ?? user.email;
+          fetch('/api/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              accessToken,
+              targetUserId: challenge.from_user_id,
+              title: `${myLabel} a relevé ton défi !`,
+              body: challenge.message,
+            }),
+          }).catch((err) => console.error('push send error', err));
+        }
+      }
+    }
     await load();
+  }
+
+  function startProofUpload(challengeId: string) {
+    pendingProofChallenge.current = challengeId;
+    proofInputRef.current?.click();
+  }
+
+  async function handleProofSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const challengeId = pendingProofChallenge.current;
+    if (!file || !challengeId || !user) return;
+    setUploadingProofFor(challengeId);
+    const { url, error } = await uploadChallengeProof(user.id, challengeId, file);
+    setUploadingProofFor(null);
+    if (error) {
+      alert(error);
+      return;
+    }
+    await updateChallenge(challengeId, 'done', url);
   }
 
   async function handleEnablePush() {
@@ -228,6 +353,7 @@ export default function AmisPage() {
     <PullToRefresh onRefresh={load}>
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Amis</h2>
+      <input ref={proofInputRef} type="file" accept="image/*" onChange={handleProofSelected} className="hidden" />
 
       {pushSupported() && !pushEnabled && (
         <div className="card flex items-center justify-between gap-3">
@@ -295,6 +421,14 @@ export default function AmisPage() {
                     <Check size={14} /> Fait
                   </button>
                   <button
+                    onClick={() => startProofUpload(c.id)}
+                    disabled={uploadingProofFor === c.id}
+                    className="flex items-center justify-center gap-1 text-xs px-3 py-1.5 rounded border border-[#333] text-neutral-400"
+                    title="Fait, avec une photo à l'appui"
+                  >
+                    <Camera size={14} /> {uploadingProofFor === c.id ? '...' : ''}
+                  </button>
+                  <button
                     onClick={() => updateChallenge(c.id, 'dismissed')}
                     className="flex items-center justify-center gap-1 text-xs px-3 py-1.5 rounded border border-[#333] text-neutral-400"
                   >
@@ -343,7 +477,10 @@ export default function AmisPage() {
           <div key={f.friend_id} className="card flex items-center justify-between py-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <Avatar url={f.friend_avatar_url} label={f.friend_label} size={28} />
-              <span className="text-sm truncate">{f.friend_label}</span>
+              <div className="min-w-0">
+                <div className="text-sm truncate">{f.friend_label}</div>
+                <div className="text-[10px] text-neutral-500">{f.friend_rank}</div>
+              </div>
             </div>
             <button onClick={() => removeFriend(f.friend_id)} className="text-red-400/80 hover:text-red-400 shrink-0">
               <Trash2 size={14} />
@@ -399,6 +536,113 @@ export default function AmisPage() {
         </div>
       )}
 
+      {duels.some((d) => d.status === 'pending' && d.opponent_id === user?.id) && (
+        <div className="space-y-2">
+          <h3 className="eyebrow">Duels proposés</h3>
+          {duels
+            .filter((d) => d.status === 'pending' && d.opponent_id === user?.id)
+            .map((d) => (
+              <div key={d.id} className="card flex items-center justify-between gap-3">
+                <div className="text-sm min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <Swords size={14} className="text-accent shrink-0" />
+                    <span className="truncate">{d.created_by_label} te défie</span>
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    {DUEL_METRIC_LABELS[d.metric]} · jusqu'au {new Date(d.ends_at).toLocaleDateString('fr-FR')}
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => respondDuel(d.id, true)}
+                    className="flex items-center gap-1 text-xs px-3 py-1.5 rounded bg-accent text-white font-semibold"
+                  >
+                    <Check size={14} /> Accepter
+                  </button>
+                  <button
+                    onClick={() => respondDuel(d.id, false)}
+                    className="flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-[#333] text-neutral-400"
+                  >
+                    <X size={14} /> Refuser
+                  </button>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {duels.some((d) => d.status === 'active') && (
+        <div className="space-y-2">
+          <h3 className="eyebrow flex items-center gap-1.5">
+            <Swords size={13} className="text-accent" /> Duels en cours
+          </h3>
+          {duels
+            .filter((d) => d.status === 'active')
+            .map((d) => {
+              const isCreator = d.created_by === user?.id;
+              const opponentLabel = isCreator ? d.opponent_label : d.created_by_label;
+              const total = d.my_progress + d.opponent_progress || 1;
+              const myPct = Math.round((d.my_progress / total) * 100);
+              const unit = d.metric === 'km' ? 'km' : d.metric === 'volume' ? 'kg' : '';
+              return (
+                <div key={d.id} className="card space-y-2">
+                  <div className="flex items-center justify-between text-xs text-neutral-500">
+                    <span>{DUEL_METRIC_LABELS[d.metric]}</span>
+                    <span>jusqu'au {new Date(d.ends_at).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-accent font-medium">Toi : {Math.round(d.my_progress * 10) / 10}{unit}</span>
+                    <span className="text-neutral-400">{opponentLabel} : {Math.round(d.opponent_progress * 10) / 10}{unit}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-[#262626] overflow-hidden flex">
+                    <div className="h-full bg-accent" style={{ width: `${myPct}%` }} />
+                    <div className="h-full bg-neutral-600" style={{ width: `${100 - myPct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      )}
+
+      {friends.length > 0 && (
+        <div className="card space-y-3">
+          <h3 className="eyebrow flex items-center gap-1.5">
+            <Swords size={13} className="text-accent" /> Lancer un duel
+          </h3>
+          <div>
+            <label className="text-xs text-neutral-500">Contre</label>
+            <select value={duelOpponent} onChange={(e) => setDuelOpponent(e.target.value)}>
+              <option value="">Choisir un ami</option>
+              {friends.map((f) => (
+                <option key={f.friend_id} value={f.friend_id}>{f.friend_label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-neutral-500">Sur quoi</label>
+              <select value={duelMetric} onChange={(e) => setDuelMetric(e.target.value as DuelMetric)}>
+                {(Object.keys(DUEL_METRIC_LABELS) as DuelMetric[]).map((m) => (
+                  <option key={m} value={m}>{DUEL_METRIC_LABELS[m]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-neutral-500">Durée</label>
+              <select value={duelDays} onChange={(e) => setDuelDays(Number(e.target.value))}>
+                <option value={7}>7 jours</option>
+                <option value={14}>14 jours</option>
+                <option value={30}>30 jours</option>
+              </select>
+            </div>
+          </div>
+          {duelError && <p className="text-red-400 text-sm">{duelError}</p>}
+          <button onClick={createDuel} disabled={creatingDuel || !duelOpponent} className="btn-primary w-full">
+            {creatingDuel ? 'Envoi...' : 'Proposer le duel'}
+          </button>
+        </div>
+      )}
+
       {friends.length > 0 && (
         <div className="card space-y-3">
           <h3 className="eyebrow">Envoyer un défi</h3>
@@ -450,22 +694,31 @@ export default function AmisPage() {
         <div className="space-y-2">
           <h3 className="eyebrow">Défis envoyés</h3>
           {sent.slice(0, 10).map((c) => (
-            <div key={c.id} className="card flex items-center justify-between py-2 text-sm">
-              <div>
-                <div>{c.message}</div>
-                <div className="text-xs text-neutral-500">à {friendLabel(c.to_user_id)}</div>
+            <div key={c.id} className="card space-y-2 py-2 text-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div>{c.message}</div>
+                  <div className="text-xs text-neutral-500">à {friendLabel(c.to_user_id)}</div>
+                </div>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${
+                    c.status === 'done'
+                      ? 'border-volt text-volt'
+                      : c.status === 'dismissed'
+                        ? 'border-[#333] text-neutral-500'
+                        : 'border-accent text-accent'
+                  }`}
+                >
+                  {c.status === 'done' ? 'Fait' : c.status === 'dismissed' ? 'Ignoré' : 'En attente'}
+                </span>
               </div>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${
-                  c.status === 'done'
-                    ? 'border-volt text-volt'
-                    : c.status === 'dismissed'
-                      ? 'border-[#333] text-neutral-500'
-                      : 'border-accent text-accent'
-                }`}
-              >
-                {c.status === 'done' ? 'Fait' : c.status === 'dismissed' ? 'Ignoré' : 'En attente'}
-              </span>
+              {c.status === 'done' && c.proof_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.proof_url} alt="Preuve" className="rounded-lg max-h-48 w-auto" />
+              )}
+              {c.status === 'done' && (
+                <ReactionBar type="challenge" activityId={c.id} reactions={challengeReactions[c.id] ?? []} onChanged={load} />
+              )}
             </div>
           ))}
         </div>

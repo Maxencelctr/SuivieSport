@@ -12,6 +12,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import Streak from '@/components/Streak';
 import WelcomeModal from '@/components/WelcomeModal';
 import WeeklyRecapModal from '@/components/WeeklyRecapModal';
+import ActivityFeed from '@/components/ActivityFeed';
 
 const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
   1: { icon: Angry, className: 'text-red-500' },
@@ -179,6 +180,8 @@ export default function HomePage() {
           </section>
         </div>
       )}
+
+      <ActivityFeed />
     </div>
     </PullToRefresh>
     {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}

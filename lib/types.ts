@@ -159,6 +159,7 @@ export interface Friend {
   friend_id: string;
   friend_label: string;
   friend_avatar_url: string | null;
+  friend_rank: string;
 }
 
 export interface FriendRequest {
@@ -184,4 +185,40 @@ export interface Challenge {
   status: ChallengeStatus;
   created_at: string;
   completed_at: string | null;
+  proof_url: string | null;
+}
+
+export interface ReactionSummary {
+  emoji: string;
+  count: number;
+  reacted_by_me: boolean;
+}
+
+export interface FeedItem {
+  activity_type: 'session' | 'run';
+  activity_id: string;
+  owner_id: string;
+  owner_label: string;
+  owner_avatar_url: string | null;
+  activity_date: string;
+  summary: string;
+  created_at: string;
+  reactions: ReactionSummary[];
+}
+
+export type DuelMetric = 'km' | 'volume' | 'sessions';
+export type DuelStatus = 'pending' | 'active' | 'declined' | 'finished';
+
+export interface Duel {
+  id: string;
+  created_by: string;
+  opponent_id: string;
+  metric: DuelMetric;
+  starts_at: string;
+  ends_at: string;
+  status: DuelStatus;
+  created_by_label: string;
+  opponent_label: string;
+  my_progress: number;
+  opponent_progress: number;
 }
