@@ -352,6 +352,10 @@ export default function AmisPage() {
     setSendSuccess(
       pushSent ? `Défi envoyé à ${sentToLabel}, notification reçue.` : `Défi envoyé à ${sentToLabel}.`
     );
+    // Repart de zéro pour éviter de renvoyer sans le vouloir au même ami
+    // (le sélecteur gardait sinon le dernier choix affiché).
+    setSelectedFriend('');
+    setMessage(PRESETS[0]);
     await loadChallenges();
     setSending(false);
   }
