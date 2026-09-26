@@ -47,6 +47,20 @@ export default function AmisPage() {
   const [myRank, setMyRank] = useState('Débutant');
   const [leaderboardMetric, setLeaderboardMetric] = useState<'volume_7j' | 'km_7j'>('volume_7j');
 
+  // Compteurs légers pour les badges des onglets, chargés dès l'arrivée sur
+  // la page. Le contenu détaillé (défis/duels/classement) n'est lui chargé
+  // qu'à la première ouverture de l'onglet correspondant, pour que la page
+  // s'affiche vite (avant, tout était chargé d'un coup même si on ne
+  // regardait que l'onglet "Amis").
+  const [pendingChallengesCount, setPendingChallengesCount] = useState(0);
+  const [pendingDuelsCount, setPendingDuelsCount] = useState(0);
+  const [challengesLoaded, setChallengesLoaded] = useState(false);
+  const [leaderboardLoaded, setLeaderboardLoaded] = useState(false);
+  const [duelsLoaded, setDuelsLoaded] = useState(false);
+  const [challengesLoading, setChallengesLoading] = useState(false);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [duelsLoading, setDuelsLoading] = useState(false);
+
   const [selectedFriend, setSelectedFriend] = useState('');
   const [message, setMessage] = useState(PRESETS[0]);
   const [sending, setSending] = useState(false);
@@ -92,39 +106,68 @@ export default function AmisPage() {
   }, []);
 
   useEffect(() => {
-    if (user) load();
+    if (user) loadCore();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  async function load() {
+  // Charge les données détaillées d'un onglet uniquement à sa première
+  // ouverture (et les garde ensuite, plus besoin de recharger en changeant
+  // d'onglet).
+  useEffect(() => {
+    if (!user) return;
+    if (tab === 'defis' && !challengesLoaded) loadChallenges();
+    if (tab === 'classement' && !leaderboardLoaded) loadLeaderboard();
+    if (tab === 'duels' && !duelsLoaded) loadDuels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, user?.id]);
+
+  // Chargement rapide au premier affichage : juste de quoi peupler l'onglet
+  // "Amis" (ouvert par défaut) et les pastilles de compteur des autres
+  // onglets — pas les listes détaillées de défis/duels/classement.
+  async function loadCore() {
     setLoading(true);
     const [
       { data: profile },
       { data: friendsData },
       { data: requestsData },
-      { data: challengesData },
-      { data: leaderboardData },
-      { data: duelsData },
+      { count: pendingChallenges },
+      { count: pendingDuels },
+      { count: sessionCount },
+      { count: runCount },
     ] = await Promise.all([
       supabase.from('profile').select('invite_code').maybeSingle(),
       supabase.rpc('get_friends'),
       supabase.rpc('get_friend_requests'),
-      supabase.from('challenges').select('*').order('created_at', { ascending: false }),
-      supabase.rpc('get_friends_leaderboard'),
-      supabase.rpc('get_my_duels'),
+      supabase
+        .from('challenges')
+        .select('id', { count: 'exact', head: true })
+        .eq('to_user_id', user?.id)
+        .eq('status', 'pending'),
+      supabase
+        .from('duels')
+        .select('id', { count: 'exact', head: true })
+        .eq('opponent_id', user?.id)
+        .eq('status', 'pending'),
+      supabase.from('strength_sessions').select('id', { count: 'exact', head: true }),
+      supabase.from('runs').select('id', { count: 'exact', head: true }),
     ]);
 
     setInviteCode(profile?.invite_code ?? null);
     setFriends(friendsData ?? []);
     setRequests(requestsData ?? []);
-    setLeaderboard(leaderboardData ?? []);
-    setDuels(duelsData ?? []);
-
-    const [{ count: sessionCount }, { count: runCount }] = await Promise.all([
-      supabase.from('strength_sessions').select('id', { count: 'exact', head: true }),
-      supabase.from('runs').select('id', { count: 'exact', head: true }),
-    ]);
+    setPendingChallengesCount(pendingChallenges ?? 0);
+    setPendingDuelsCount(pendingDuels ?? 0);
     setMyRank(computeRankClient((sessionCount ?? 0) + (runCount ?? 0)));
+    setLoading(false);
+  }
+
+  async function loadChallenges() {
+    setChallengesLoading(true);
+    const { data: challengesData } = await supabase
+      .from('challenges')
+      .select('id, from_user_id, to_user_id, message, status, created_at, completed_at, proof_url')
+      .order('created_at', { ascending: false })
+      .limit(100);
 
     const all = (challengesData ?? []) as Challenge[];
     setReceived(all.filter((c) => c.to_user_id === user?.id));
@@ -155,7 +198,33 @@ export default function AmisPage() {
       setChallengeReactions({});
     }
 
-    setLoading(false);
+    setChallengesLoaded(true);
+    setChallengesLoading(false);
+  }
+
+  async function loadLeaderboard() {
+    setLeaderboardLoading(true);
+    const { data } = await supabase.rpc('get_friends_leaderboard');
+    setLeaderboard(data ?? []);
+    setLeaderboardLoaded(true);
+    setLeaderboardLoading(false);
+  }
+
+  async function loadDuels() {
+    setDuelsLoading(true);
+    const { data } = await supabase.rpc('get_my_duels');
+    setDuels(data ?? []);
+    setDuelsLoaded(true);
+    setDuelsLoading(false);
+  }
+
+  async function refreshAll() {
+    await Promise.all([
+      loadCore(),
+      challengesLoaded && loadChallenges(),
+      leaderboardLoaded && loadLeaderboard(),
+      duelsLoaded && loadDuels(),
+    ]);
   }
 
   async function createDuel() {
@@ -173,13 +242,13 @@ export default function AmisPage() {
       return;
     }
     toast.trigger('Duel proposé');
-    await load();
+    await loadDuels();
   }
 
   async function respondDuel(duelId: string, accept: boolean) {
     await supabase.rpc('respond_duel', { p_duel_id: duelId, p_accept: accept });
     toast.trigger(accept ? 'Duel accepté 🔥' : 'Duel refusé');
-    await load();
+    await Promise.all([loadCore(), loadDuels()]);
   }
 
   async function copyCode() {
@@ -204,19 +273,19 @@ export default function AmisPage() {
     }
     setCodeInput('');
     setRedeemSuccess(`Demande envoyée à ${data?.[0]?.friend_label ?? 'cet utilisateur'}.`);
-    await load();
+    await loadCore();
   }
 
   async function respondRequest(requestId: string, accept: boolean) {
     await supabase.rpc('respond_friend_request', { request_id: requestId, accept });
     toast.trigger(accept ? 'Ami ajouté' : 'Demande refusée');
-    await load();
+    await loadCore();
   }
 
   async function removeFriend(friendId: string) {
     if (!confirm('Retirer cet ami ?')) return;
     await supabase.from('friend_requests').delete().or(`from_user_id.eq.${friendId},to_user_id.eq.${friendId}`);
-    await load();
+    await loadCore();
   }
 
   async function sendChallenge() {
@@ -283,7 +352,7 @@ export default function AmisPage() {
     setSendSuccess(
       pushSent ? `Défi envoyé à ${sentToLabel}, notification reçue.` : `Défi envoyé à ${sentToLabel}.`
     );
-    await load();
+    await loadChallenges();
     setSending(false);
   }
 
@@ -320,7 +389,7 @@ export default function AmisPage() {
         }
       }
     }
-    await load();
+    await Promise.all([loadCore(), loadChallenges()]);
   }
 
   function startProofUpload(challengeId: string) {
@@ -367,7 +436,7 @@ export default function AmisPage() {
   if (loading) return <p className="text-neutral-500 text-sm">Chargement...</p>;
 
   return (
-    <PullToRefresh onRefresh={load}>
+    <PullToRefresh onRefresh={refreshAll}>
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">Amis</h2>
       <input ref={proofInputRef} type="file" accept="image/*" onChange={handleProofSelected} className="hidden" />
@@ -392,12 +461,10 @@ export default function AmisPage() {
 
       {(() => {
         const pendingRequests = requests.length;
-        const pendingChallenges = received.filter((c) => c.status === 'pending').length;
-        const pendingDuels = duels.filter((d) => d.status === 'pending' && d.opponent_id === user?.id).length;
         const TABS: { key: Tab; label: string; badge: number }[] = [
           { key: 'amis', label: 'Amis', badge: pendingRequests },
-          { key: 'defis', label: 'Défis', badge: pendingChallenges },
-          { key: 'duels', label: 'Duels', badge: pendingDuels },
+          { key: 'defis', label: 'Défis', badge: pendingChallengesCount },
+          { key: 'duels', label: 'Duels', badge: pendingDuelsCount },
           { key: 'classement', label: 'Classement', badge: 0 },
         ];
         return (
@@ -421,6 +488,16 @@ export default function AmisPage() {
           </div>
         );
       })()}
+
+      {tab === 'defis' && challengesLoading && !challengesLoaded && (
+        <p className="text-neutral-500 text-sm">Chargement...</p>
+      )}
+      {tab === 'duels' && duelsLoading && !duelsLoaded && (
+        <p className="text-neutral-500 text-sm">Chargement...</p>
+      )}
+      {tab === 'classement' && leaderboardLoading && !leaderboardLoaded && (
+        <p className="text-neutral-500 text-sm">Chargement...</p>
+      )}
 
       {tab === 'amis' && requests.length > 0 && (
         <div className="space-y-2">
@@ -793,7 +870,7 @@ export default function AmisPage() {
                 <img src={c.proof_url} alt="Preuve" className="rounded-lg max-h-48 w-auto" />
               )}
               {c.status === 'done' && (
-                <ReactionBar type="challenge" activityId={c.id} reactions={challengeReactions[c.id] ?? []} onChanged={load} />
+                <ReactionBar type="challenge" activityId={c.id} reactions={challengeReactions[c.id] ?? []} onChanged={loadChallenges} />
               )}
             </div>
           ))}

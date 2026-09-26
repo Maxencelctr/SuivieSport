@@ -133,7 +133,7 @@ export default function ProfilPage() {
     });
     setSaving(false);
     if (error) {
-      alert(error.message.includes('unique') ? 'Ce pseudo est déjà pris.' : "Erreur lors de l'enregistrement");
+      alert(error.message.includes('unique') ? 'Ce pseudo est déjà pris.' : `Erreur lors de l'enregistrement : ${error.message}`);
       return;
     }
     toast.trigger('Profil enregistré');
