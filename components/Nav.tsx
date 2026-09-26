@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { Dumbbell, Footprints, Home, LogOut, Users, Utensils } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ArrowLeft, Dumbbell, Footprints, Home, LogOut, Users, Utensils } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { signOutAndClear } from '@/lib/auth';
 import { haptic } from '@/lib/haptics';
@@ -37,6 +37,7 @@ const BOTTOM_TABS = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const [pendingChallenges, setPendingChallenges] = useState(0);
   const [profile, setProfile] = useState<{ pseudo: string | null; avatar_url: string | null } | null>(null);
@@ -66,11 +67,26 @@ export default function Nav() {
 
   const avatarLabel = profile?.pseudo ?? user?.email ?? null;
 
+  // Pages hors des 5 onglets du bas (Calendrier, Objectifs, Stats, Profil,
+  // Paramètres, fiches détail...) : ces pages n'ont pas toutes un lien retour
+  // dans leur propre en-tête, donc un bouton retour générique dans la nav
+  // évite l'impasse quand on y arrive depuis /profil.
+  const isBottomTabRoot = BOTTOM_TABS.some((t) => (t.href === '/' ? pathname === '/' : pathname.startsWith(t.href)));
+
   return (
     <>
     <header className="sticky top-0 z-30 bg-[#0a0a0b]/95 backdrop-blur border-b border-[#1e1e21]">
       <div className="max-w-5xl mx-auto px-4 md:px-6">
         <div className="relative flex items-center h-14 gap-2">
+          {!isBottomTabRoot && (
+            <button
+              onClick={() => router.back()}
+              className="md:hidden -ml-1.5 p-1.5 text-neutral-300 shrink-0"
+              aria-label="Retour"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
           <Link href="/" className="flex items-center shrink-0">
             <Image src="/logo-volt.png" alt="Volt" width={92} height={46} priority className="h-7 w-auto" />
           </Link>

@@ -123,7 +123,9 @@ export interface Profile {
   water_goal_ml: number | null;
   unit_system: 'metric' | 'imperial';
   morning_motivation_enabled: boolean;
+  morning_motivation_hour: number;
   supplement_reminder_enabled: boolean;
+  supplement_reminder_hour: number;
   updated_at: string;
 }
 

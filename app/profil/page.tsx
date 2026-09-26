@@ -51,7 +51,9 @@ export default function ProfilPage() {
   const [goal, setGoal] = useState<NutritionGoal>('maintien');
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
   const [morningMotivation, setMorningMotivation] = useState(true);
+  const [morningHour, setMorningHour] = useState(9);
   const [supplementReminder, setSupplementReminder] = useState(true);
+  const [supplementHour, setSupplementHour] = useState(20);
   const [schedule, setSchedule] = useState<Record<number, string>>({});
   const [savingSchedule, setSavingSchedule] = useState(false);
 
@@ -68,7 +70,9 @@ export default function ProfilPage() {
         if (data.goal) setGoal(data.goal);
         if (data.unit_system) setUnitSystem(data.unit_system);
         if (data.morning_motivation_enabled != null) setMorningMotivation(data.morning_motivation_enabled);
+        if (data.morning_motivation_hour != null) setMorningHour(data.morning_motivation_hour);
         if (data.supplement_reminder_enabled != null) setSupplementReminder(data.supplement_reminder_enabled);
+        if (data.supplement_reminder_hour != null) setSupplementHour(data.supplement_reminder_hour);
       }
       setLoading(false);
     });
@@ -122,7 +126,9 @@ export default function ProfilPage() {
       goal,
       unit_system: unitSystem,
       morning_motivation_enabled: morningMotivation,
+      morning_motivation_hour: morningHour,
       supplement_reminder_enabled: supplementReminder,
+      supplement_reminder_hour: supplementHour,
       updated_at: new Date().toISOString(),
     });
     setSaving(false);
@@ -268,14 +274,46 @@ export default function ProfilPage() {
         <h3 className="text-sm font-medium flex items-center gap-1.5">
           <Bell size={14} className="text-accent" /> Notifications
         </h3>
-        <label className="flex items-center justify-between text-sm">
-          <span className="text-neutral-300">Message de motivation le matin (~9h)</span>
-          <input type="checkbox" checked={morningMotivation} onChange={(e) => setMorningMotivation(e.target.checked)} className="w-auto" />
-        </label>
-        <label className="flex items-center justify-between text-sm">
-          <span className="text-neutral-300">Rappel compléments non pris (~20h)</span>
-          <input type="checkbox" checked={supplementReminder} onChange={(e) => setSupplementReminder(e.target.checked)} className="w-auto" />
-        </label>
+
+        <div className="flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm text-neutral-300 flex-1 min-w-0">
+            <input type="checkbox" checked={morningMotivation} onChange={(e) => setMorningMotivation(e.target.checked)} className="w-auto shrink-0" />
+            <span className="truncate">Message de motivation le matin</span>
+          </label>
+          {morningMotivation && (
+            <select
+              value={morningHour}
+              onChange={(e) => setMorningHour(Number(e.target.value))}
+              className="w-auto shrink-0"
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>{h.toString().padStart(2, '0')}h</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm text-neutral-300 flex-1 min-w-0">
+            <input type="checkbox" checked={supplementReminder} onChange={(e) => setSupplementReminder(e.target.checked)} className="w-auto shrink-0" />
+            <span className="truncate">Rappel compléments non pris</span>
+          </label>
+          {supplementReminder && (
+            <select
+              value={supplementHour}
+              onChange={(e) => setSupplementHour(Number(e.target.value))}
+              className="w-auto shrink-0"
+            >
+              {Array.from({ length: 24 }, (_, h) => (
+                <option key={h} value={h}>{h.toString().padStart(2, '0')}h</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <p className="text-[11px] text-neutral-600">
+          Vérifié une fois par heure — la notif arrive dans l'heure choisie (marge de quelques minutes possible).
+        </p>
       </div>
 
       <div className="card space-y-3">
