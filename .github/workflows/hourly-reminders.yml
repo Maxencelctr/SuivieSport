@@ -1,0 +1,21 @@
+name: Hourly reminders
+
+# Le plan Vercel Hobby n'autorise que des cron jobs quotidiens (une fois par
+# jour max) — impossible d'y déclencher une vérification toutes les heures
+# pour respecter l'horaire choisi par chaque utilisateur. On utilise donc
+# GitHub Actions (gratuit, sans cette limite) pour appeler les mêmes routes
+# API toutes les heures à la place du cron Vercel.
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Morning motivation
+        run: curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://suivie-sport.vercel.app/api/cron/morning-motivation
+      - name: Supplement reminder
+        run: curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://suivie-sport.vercel.app/api/cron/supplement-reminder
