@@ -278,7 +278,7 @@ export default function ProfilPage() {
         <div className="flex items-center justify-between gap-3">
           <label className="flex items-center gap-2 text-sm text-neutral-300 flex-1 min-w-0">
             <input type="checkbox" checked={morningMotivation} onChange={(e) => setMorningMotivation(e.target.checked)} className="w-auto shrink-0" />
-            <span className="truncate">Message de motivation le matin</span>
+            <span className="truncate">Message de motivation</span>
           </label>
           {morningMotivation && (
             <select
