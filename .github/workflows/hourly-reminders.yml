@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Morning motivation
-        run: curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://suivie-sport.vercel.app/api/cron/morning-motivation
+        run: |
+          curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://suivie-sport.vercel.app/api/cron/morning-motivation
       - name: Supplement reminder
-        run: curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://suivie-sport.vercel.app/api/cron/supplement-reminder
+        run: |
+          curl -sf -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://suivie-sport.vercel.app/api/cron/supplement-reminder
