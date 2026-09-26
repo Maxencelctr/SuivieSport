@@ -7,6 +7,8 @@ import { useAuth } from './AuthProvider';
 import { FeedItem } from '@/lib/types';
 import Avatar from './Avatar';
 import ReactionBar from './ReactionBar';
+import RankedName from './RankedName';
+import { computeRankClient } from '@/lib/ranks';
 
 function relativeDate(iso: string) {
   const date = new Date(iso);
@@ -20,10 +22,22 @@ export default function ActivityFeed() {
   const { user } = useAuth();
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ranks, setRanks] = useState<Record<string, string>>({});
 
   async function load() {
-    const { data } = await supabase.rpc('get_friends_feed', { limit_count: 15 });
+    const [{ data }, { data: friendsData }, { count: sessionCount }, { count: runCount }] = await Promise.all([
+      supabase.rpc('get_friends_feed', { limit_count: 15 }),
+      supabase.rpc('get_friends'),
+      supabase.from('strength_sessions').select('id', { count: 'exact', head: true }),
+      supabase.from('runs').select('id', { count: 'exact', head: true }),
+    ]);
     setItems(data ?? []);
+
+    const rankMap: Record<string, string> = {};
+    (friendsData ?? []).forEach((f: any) => (rankMap[f.friend_id] = f.friend_rank));
+    if (user) rankMap[user.id] = computeRankClient((sessionCount ?? 0) + (runCount ?? 0));
+    setRanks(rankMap);
+
     setLoading(false);
   }
 
@@ -46,8 +60,8 @@ export default function ActivityFeed() {
             <div className="flex items-center gap-2.5">
               <Avatar url={item.owner_avatar_url} label={item.owner_label} size={28} />
               <div className="min-w-0 flex-1">
-                <div className="text-sm">
-                  <span className="font-medium">{isMe ? 'Toi' : item.owner_label}</span>{' '}
+                <div className="text-sm flex items-center gap-1 flex-wrap">
+                  <RankedName label={isMe ? 'Toi' : item.owner_label} rank={ranks[item.owner_id]} className="font-medium" />
                   <span className="text-neutral-400">
                     {item.activity_type === 'session' ? "a fait une séance" : 'a couru'}
                   </span>

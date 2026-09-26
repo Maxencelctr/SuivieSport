@@ -13,6 +13,8 @@ import { Challenge, Duel, DuelMetric, Friend, FriendRequest, LeaderboardEntry, R
 import Avatar from '@/components/Avatar';
 import ReactionBar from '@/components/ReactionBar';
 import { uploadChallengeProof } from '@/lib/challengeProof';
+import { computeRankClient } from '@/lib/ranks';
+import RankedName from '@/components/RankedName';
 
 const PRESETS = ['10 pompes maintenant', '20 squats maintenant', '30 secondes de gainage', 'Va courir 2km aujourd\'hui'];
 
@@ -39,6 +41,7 @@ export default function AmisPage() {
   const [sent, setSent] = useState<Challenge[]>([]);
   const [challengeReactions, setChallengeReactions] = useState<Record<string, ReactionSummary[]>>({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [myRank, setMyRank] = useState('Débutant');
   const [leaderboardMetric, setLeaderboardMetric] = useState<'volume_7j' | 'km_7j'>('volume_7j');
 
   const [selectedFriend, setSelectedFriend] = useState('');
@@ -113,6 +116,12 @@ export default function AmisPage() {
     setRequests(requestsData ?? []);
     setLeaderboard(leaderboardData ?? []);
     setDuels(duelsData ?? []);
+
+    const [{ count: sessionCount }, { count: runCount }] = await Promise.all([
+      supabase.from('strength_sessions').select('id', { count: 'exact', head: true }),
+      supabase.from('runs').select('id', { count: 'exact', head: true }),
+    ]);
+    setMyRank(computeRankClient((sessionCount ?? 0) + (runCount ?? 0)));
 
     const all = (challengesData ?? []) as Challenge[];
     setReceived(all.filter((c) => c.to_user_id === user?.id));
@@ -347,6 +356,11 @@ export default function AmisPage() {
     return friends.find((f) => f.friend_id === id)?.friend_label ?? '…';
   }
 
+  function rankFor(id: string) {
+    if (id === user?.id) return myRank;
+    return friends.find((f) => f.friend_id === id)?.friend_rank ?? 'Débutant';
+  }
+
   if (loading) return <p className="text-neutral-500 text-sm">Chargement...</p>;
 
   return (
@@ -412,7 +426,9 @@ export default function AmisPage() {
                   <Flame size={16} className="text-accent shrink-0" />
                   <span className="font-medium">{c.message}</span>
                 </div>
-                <div className="text-xs text-neutral-500">De {friendLabel(c.from_user_id)}</div>
+                <div className="text-xs text-neutral-500">
+                  De <RankedName label={friendLabel(c.from_user_id)} rank={rankFor(c.from_user_id)} />
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => updateChallenge(c.id, 'done')}
@@ -478,7 +494,7 @@ export default function AmisPage() {
             <div className="flex items-center gap-2.5 min-w-0">
               <Avatar url={f.friend_avatar_url} label={f.friend_label} size={28} />
               <div className="min-w-0">
-                <div className="text-sm truncate">{f.friend_label}</div>
+                <RankedName label={f.friend_label} rank={f.friend_rank} className="text-sm" />
                 <div className="text-[10px] text-neutral-500">{f.friend_rank}</div>
               </div>
             </div>
@@ -522,9 +538,11 @@ export default function AmisPage() {
                   <span className={`w-5 text-center text-xs font-semibold ${i === 0 ? 'text-volt' : 'text-neutral-600'}`}>
                     {i + 1}
                   </span>
-                  <span className={`flex-1 truncate ${entry.person_id === user?.id ? 'text-accent font-medium' : ''}`}>
-                    {entry.person_id === user?.id ? 'Toi' : entry.label}
-                  </span>
+                  <RankedName
+                    label={entry.person_id === user?.id ? 'Toi' : entry.label}
+                    rank={rankFor(entry.person_id)}
+                    className="flex-1"
+                  />
                   <span className="stat-number text-neutral-300">
                     {leaderboardMetric === 'volume_7j'
                       ? `${Math.round(entry.volume_7j).toLocaleString('fr-FR')}kg`
@@ -546,7 +564,7 @@ export default function AmisPage() {
                 <div className="text-sm min-w-0">
                   <div className="flex items-center gap-1.5">
                     <Swords size={14} className="text-accent shrink-0" />
-                    <span className="truncate">{d.created_by_label} te défie</span>
+                    <RankedName label={d.created_by_label} rank={rankFor(d.created_by)} /> <span>te défie</span>
                   </div>
                   <div className="text-xs text-neutral-500">
                     {DUEL_METRIC_LABELS[d.metric]} · jusqu'au {new Date(d.ends_at).toLocaleDateString('fr-FR')}
@@ -581,6 +599,7 @@ export default function AmisPage() {
             .map((d) => {
               const isCreator = d.created_by === user?.id;
               const opponentLabel = isCreator ? d.opponent_label : d.created_by_label;
+              const opponentId = isCreator ? d.opponent_id : d.created_by;
               const total = d.my_progress + d.opponent_progress || 1;
               const myPct = Math.round((d.my_progress / total) * 100);
               const unit = d.metric === 'km' ? 'km' : d.metric === 'volume' ? 'kg' : '';
@@ -592,7 +611,9 @@ export default function AmisPage() {
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-accent font-medium">Toi : {Math.round(d.my_progress * 10) / 10}{unit}</span>
-                    <span className="text-neutral-400">{opponentLabel} : {Math.round(d.opponent_progress * 10) / 10}{unit}</span>
+                    <span className="flex items-center gap-1">
+                      <RankedName label={opponentLabel} rank={rankFor(opponentId)} /> : {Math.round(d.opponent_progress * 10) / 10}{unit}
+                    </span>
                   </div>
                   <div className="h-2 rounded-full bg-[#262626] overflow-hidden flex">
                     <div className="h-full bg-accent" style={{ width: `${myPct}%` }} />
@@ -698,7 +719,9 @@ export default function AmisPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div>{c.message}</div>
-                  <div className="text-xs text-neutral-500">à {friendLabel(c.to_user_id)}</div>
+                  <div className="text-xs text-neutral-500">
+                    à <RankedName label={friendLabel(c.to_user_id)} rank={rankFor(c.to_user_id)} />
+                  </div>
                 </div>
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full border shrink-0 ${
