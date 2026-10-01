@@ -25,13 +25,29 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       .then(({ BrowserMultiFormatReader }) => {
         if (cancelled || !videoRef.current) return;
         const reader = new BrowserMultiFormatReader();
-        return reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
-          if (result && !scannedRef.current) {
-            scannedRef.current = true;
-            haptic(20);
-            onScan(result.getText());
+        // Sans contraintes explicites, le navigateur/zxing choisit souvent
+        // une résolution basse par défaut, qu'on étire ensuite en plein
+        // écran (object-cover) — d'où le flou. On demande la caméra arrière
+        // en haute résolution avec mise au point continue (ignoré sans
+        // erreur sur les appareils qui ne la supportent pas).
+        return reader.decodeFromConstraints(
+          {
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              advanced: [{ focusMode: 'continuous' } as unknown as MediaTrackConstraintSet],
+            },
+          },
+          videoRef.current,
+          (result) => {
+            if (result && !scannedRef.current) {
+              scannedRef.current = true;
+              haptic(20);
+              onScan(result.getText());
+            }
           }
-        });
+        );
       })
       .then((c) => {
         if (cancelled) c?.stop();

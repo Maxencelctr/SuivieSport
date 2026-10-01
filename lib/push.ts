@@ -20,7 +20,7 @@ export async function isPushEnabled(): Promise<boolean> {
   return !!subscription;
 }
 
-export async function enablePushNotifications(): Promise<{ ok: boolean; error?: string }> {
+export async function enablePushNotifications(options?: { forceResubscribe?: boolean }): Promise<{ ok: boolean; error?: string }> {
   if (!pushSupported()) {
     return { ok: false, error: "Les notifications ne sont pas supportées sur cet appareil/navigateur." };
   }
@@ -35,12 +35,26 @@ export async function enablePushNotifications(): Promise<{ ok: boolean; error?: 
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Non connecté.' };
 
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!vapidPublicKey) return { ok: false, error: 'Clé VAPID manquante côté client.' };
+
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
+
+  // Si on force (bouton "réinitialiser") ou si l'abonnement existant a été
+  // créé avec une ancienne clé VAPID (après une rotation de clé côté
+  // serveur), le réabonnement silencieux ci-dessous ne suffit pas : il faut
+  // d'abord se désabonner, sinon le navigateur garde l'ancien abonnement
+  // mort et tous les envois échouent sans que rien ne le signale.
+  if (subscription && options?.forceResubscribe) {
+    await subscription.unsubscribe();
+    subscription = null;
+  }
+
   if (!subscription) {
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
     });
   }
 

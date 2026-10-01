@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
+import { sendPushToAll } from '@/lib/sendPush';
 
 // Appelée une fois par jour par Vercel Cron (voir vercel.json). Protégée en
 // double : le header Authorization que Vercel ajoute automatiquement quand
@@ -28,18 +29,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const results = await Promise.allSettled(
-    (targets ?? []).map((t: { endpoint: string; p256dh: string; auth_key: string; missing_supplements: string[] }) =>
-      webpush.sendNotification(
-        { endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth_key } },
-        JSON.stringify({
-          title: 'Pense à tes compléments 💊',
-          body: `N'oublie pas : ${t.missing_supplements.join(', ')}. C'est important ;)`,
-          url: '/alimentation',
-        })
-      )
-    )
+  const { sent, total, errors } = await sendPushToAll(
+    supabase,
+    (targets ?? []) as { endpoint: string; p256dh: string; auth_key: string; missing_supplements: string[] }[],
+    (t) => ({
+      title: 'Pense à tes compléments 💊',
+      body: `N'oublie pas : ${t.missing_supplements.join(', ')}. C'est important ;)`,
+      url: '/alimentation',
+    })
   );
+  if (errors.length > 0) console.error('supplement reminder push errors', errors);
 
-  return NextResponse.json({ sent: results.filter((r) => r.status === 'fulfilled').length, total: results.length });
+  return NextResponse.json({ sent, total, errors });
 }

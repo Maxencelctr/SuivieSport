@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
+import { sendPushToAll } from '@/lib/sendPush';
 
 // Envoie une notification push à un ami quand on lui crée un défi. Tourne
 // côté serveur car web-push a besoin de la clé VAPID privée. Pas de clé
@@ -33,14 +34,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 403 });
   }
 
-  const results = await Promise.allSettled(
-    (subs ?? []).map((s: { endpoint: string; p256dh: string; auth_key: string }) =>
-      webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth_key } },
-        JSON.stringify({ title, body, url: '/amis' })
-      )
-    )
-  );
+  const { sent, total, errors } = await sendPushToAll(supabase, subs ?? [], { title, body, url: '/amis' });
+  if (errors.length > 0) console.error('push send errors', errors);
 
-  return NextResponse.json({ sent: results.filter((r) => r.status === 'fulfilled').length, total: results.length });
+  return NextResponse.json({ sent, total, errors });
 }

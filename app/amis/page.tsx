@@ -321,6 +321,7 @@ export default function AmisPage() {
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     let pushSent = false;
+    let pushDebug: string | null = null;
     if (accessToken) {
       try {
         const { data: myProfile } = await supabase.from('profile').select('pseudo, email').maybeSingle();
@@ -338,6 +339,13 @@ export default function AmisPage() {
         if (res.ok) {
           const json = await res.json();
           pushSent = (json.sent ?? 0) > 0;
+          // L'ami a des abonnements enregistrés mais aucun n'a réussi à
+          // recevoir la notif (ex: clé VAPID périmée) — on remonte la
+          // vraie raison au lieu de rester silencieux dessus.
+          if (!pushSent && json.total > 0 && json.errors?.length) {
+            pushDebug = `notif échouée : ${json.errors[0]}`;
+            console.error('push send errors', json.errors);
+          }
         } else {
           console.error('push send failed', await res.text());
         }
@@ -350,7 +358,11 @@ export default function AmisPage() {
 
     toast.trigger('Défi envoyé');
     setSendSuccess(
-      pushSent ? `Défi envoyé à ${sentToLabel}, notification reçue.` : `Défi envoyé à ${sentToLabel}.`
+      pushSent
+        ? `Défi envoyé à ${sentToLabel}, notification reçue.`
+        : pushDebug
+          ? `Défi envoyé à ${sentToLabel} (${pushDebug}).`
+          : `Défi envoyé à ${sentToLabel}.`
     );
     // Repart de zéro pour éviter de renvoyer sans le vouloir au même ami
     // (le sélecteur gardait sinon le dernier choix affiché).
@@ -416,16 +428,17 @@ export default function AmisPage() {
     await updateChallenge(challengeId, 'done', url);
   }
 
-  async function handleEnablePush() {
+  async function handleEnablePush(forceResubscribe = false) {
     setPushLoading(true);
     setPushError(null);
-    const res = await enablePushNotifications();
+    const res = await enablePushNotifications({ forceResubscribe });
     setPushLoading(false);
     if (!res.ok) {
       setPushError(res.error ?? 'Erreur inconnue.');
       return;
     }
     setPushEnabled(true);
+    if (forceResubscribe) toast.trigger('Notifications réinitialisées');
   }
 
   function friendLabel(id: string) {
@@ -451,15 +464,20 @@ export default function AmisPage() {
             <Bell size={16} className="text-accent shrink-0" />
             <span>Active les notifications pour recevoir les défis de tes amis même app fermée.</span>
           </div>
-          <button onClick={handleEnablePush} disabled={pushLoading} className="btn-primary text-sm px-3 py-1.5 shrink-0">
+          <button onClick={() => handleEnablePush(false)} disabled={pushLoading} className="btn-primary text-sm px-3 py-1.5 shrink-0">
             {pushLoading ? '...' : 'Activer'}
           </button>
         </div>
       )}
       {pushError && <p className="text-red-400 text-sm">{pushError}</p>}
       {pushEnabled && (
-        <div className="flex items-center gap-2 text-xs text-neutral-500">
-          <Bell size={14} className="text-accent" /> Notifications activées sur cet appareil
+        <div className="flex items-center justify-between gap-2 text-xs text-neutral-500">
+          <span className="flex items-center gap-2">
+            <Bell size={14} className="text-accent" /> Notifications activées sur cet appareil
+          </span>
+          <button onClick={() => handleEnablePush(true)} disabled={pushLoading} className="text-accent underline shrink-0">
+            {pushLoading ? '...' : 'Rien ne marche ? Réinitialiser'}
+          </button>
         </div>
       )}
 

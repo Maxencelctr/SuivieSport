@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import webpush from 'web-push';
+import { sendPushToAll } from '@/lib/sendPush';
 
 const GENERIC_MESSAGES = [
   "Nouvelle journée, nouvelle occasion de progresser 💪",
@@ -34,16 +35,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const results = await Promise.allSettled(
-    (targets ?? []).map((t: { endpoint: string; p256dh: string; auth_key: string; label: string; has_workout_today: boolean }) => {
+  const { sent, total, errors } = await sendPushToAll(
+    supabase,
+    (targets ?? []) as { endpoint: string; p256dh: string; auth_key: string; label: string; has_workout_today: boolean }[],
+    (t) => {
       const pool = t.has_workout_today ? WORKOUT_MESSAGES : GENERIC_MESSAGES;
       const body = pool[Math.floor(Math.random() * pool.length)];
-      return webpush.sendNotification(
-        { endpoint: t.endpoint, keys: { p256dh: t.p256dh, auth: t.auth_key } },
-        JSON.stringify({ title: `Salut ${t.label} 👋`, body, url: '/' })
-      );
-    })
+      return { title: `Salut ${t.label} 👋`, body, url: '/' };
+    }
   );
+  if (errors.length > 0) console.error('morning motivation push errors', errors);
 
-  return NextResponse.json({ sent: results.filter((r) => r.status === 'fulfilled').length, total: results.length });
+  return NextResponse.json({ sent, total, errors });
 }
