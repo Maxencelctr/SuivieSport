@@ -14,7 +14,9 @@ interface BarcodeScannerProps {
 // lance ensuite la recherche Open Food Facts par code-barres.
 export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const captureInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [captureLoading, setCaptureLoading] = useState(false);
   const scannedRef = useRef(false);
 
   useEffect(() => {
@@ -64,6 +66,33 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Solution de secours quand le flux vidéo en direct reste flou (certains
+  // téléphones ne font pas d'autofocus continu dans le navigateur) : on
+  // utilise l'appli appareil photo native du téléphone, qui fait sa propre
+  // mise au point avant de prendre la photo — bien plus net qu'un flux live.
+  async function handleCaptureFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setCaptureLoading(true);
+    setError(null);
+    const url = URL.createObjectURL(file);
+    try {
+      const { BrowserMultiFormatReader } = await import('@zxing/browser');
+      const reader = new BrowserMultiFormatReader();
+      const result = await reader.decodeFromImageUrl(url);
+      if (result) {
+        haptic(20);
+        onScan(result.getText());
+      }
+    } catch {
+      setError("Code-barres non détecté sur la photo. Réessaie en te rapprochant.");
+    } finally {
+      URL.revokeObjectURL(url);
+      setCaptureLoading(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       <div className="flex items-center justify-between p-4">
@@ -83,7 +112,23 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
       {error && (
         <div className="p-4 text-center text-red-400 text-sm bg-black">{error}</div>
       )}
-      <p className="text-center text-neutral-500 text-xs pb-6">Vise le code-barres du produit</p>
+      <p className="text-center text-neutral-500 text-xs">Vise le code-barres du produit</p>
+
+      <input
+        ref={captureInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCaptureFile}
+        className="hidden"
+      />
+      <button
+        onClick={() => captureInputRef.current?.click()}
+        disabled={captureLoading}
+        className="mx-4 mb-6 mt-3 text-sm text-accent underline"
+      >
+        {captureLoading ? 'Lecture...' : "C'est flou ? Prendre une photo à la place"}
+      </button>
     </div>
   );
 }

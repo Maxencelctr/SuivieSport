@@ -89,6 +89,8 @@ export default function AmisPage() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
+  const [pushTesting, setPushTesting] = useState(false);
+  const [pushTestResult, setPushTestResult] = useState<string | null>(null);
 
   const [duels, setDuels] = useState<Duel[]>([]);
   const [duelOpponent, setDuelOpponent] = useState('');
@@ -272,7 +274,9 @@ export default function AmisPage() {
       return;
     }
     setCodeInput('');
-    setRedeemSuccess(`Demande envoyée à ${data?.[0]?.friend_label ?? 'cet utilisateur'}.`);
+    const label = data?.[0]?.friend_label ?? 'cet utilisateur';
+    setRedeemSuccess(`Demande envoyée à ${label}.`);
+    toast.trigger(`Demande envoyée à ${label}`);
     await loadCore();
   }
 
@@ -441,6 +445,38 @@ export default function AmisPage() {
     if (forceResubscribe) toast.trigger('Notifications réinitialisées');
   }
 
+  async function handleTestPush() {
+    setPushTesting(true);
+    setPushTestResult(null);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      setPushTesting(false);
+      setPushTestResult("Pas connecté.");
+      return;
+    }
+    try {
+      const res = await fetch('/api/push/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setPushTestResult(json.error ?? 'Erreur inconnue.');
+      } else if (json.total === 0) {
+        setPushTestResult("Aucun abonnement enregistré — réactive les notifications d'abord.");
+      } else if (json.sent > 0) {
+        setPushTestResult(`Envoyée (${json.sent}/${json.total}) — regarde si elle arrive, même app fermée.`);
+      } else {
+        setPushTestResult(`Échec : ${json.errors?.[0] ?? 'raison inconnue'}`);
+      }
+    } catch (err) {
+      setPushTestResult('Erreur réseau.');
+    }
+    setPushTesting(false);
+  }
+
   function friendLabel(id: string) {
     return friends.find((f) => f.friend_id === id)?.friend_label ?? '…';
   }
@@ -471,13 +507,21 @@ export default function AmisPage() {
       )}
       {pushError && <p className="text-red-400 text-sm">{pushError}</p>}
       {pushEnabled && (
-        <div className="flex items-center justify-between gap-2 text-xs text-neutral-500">
-          <span className="flex items-center gap-2">
-            <Bell size={14} className="text-accent" /> Notifications activées sur cet appareil
-          </span>
-          <button onClick={() => handleEnablePush(true)} disabled={pushLoading} className="text-accent underline shrink-0">
-            {pushLoading ? '...' : 'Rien ne marche ? Réinitialiser'}
-          </button>
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2 text-xs text-neutral-500">
+            <span className="flex items-center gap-2">
+              <Bell size={14} className="text-accent" /> Notifications activées sur cet appareil
+            </span>
+            <span className="flex items-center gap-3 shrink-0">
+              <button onClick={handleTestPush} disabled={pushTesting} className="text-accent underline">
+                {pushTesting ? '...' : 'Tester'}
+              </button>
+              <button onClick={() => handleEnablePush(true)} disabled={pushLoading} className="text-accent underline">
+                {pushLoading ? '...' : 'Réinitialiser'}
+              </button>
+            </span>
+          </div>
+          {pushTestResult && <p className="text-xs text-neutral-400">{pushTestResult}</p>}
         </div>
       )}
 
