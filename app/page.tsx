@@ -12,6 +12,7 @@ import PullToRefresh from '@/components/PullToRefresh';
 import Streak from '@/components/Streak';
 import WelcomeModal from '@/components/WelcomeModal';
 import WeeklyRecapModal from '@/components/WeeklyRecapModal';
+import WinterArcModal from '@/components/WinterArcModal';
 import ActivityFeed from '@/components/ActivityFeed';
 
 const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
@@ -29,6 +30,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showRecap, setShowRecap] = useState(false);
+  const [showWinterArc, setShowWinterArc] = useState(false);
 
   useEffect(() => {
     load();
@@ -36,7 +38,23 @@ export default function HomePage() {
       sessionStorage.removeItem('volt_just_signed_up');
       setShowWelcome(true);
     }
+
+    const WINTER_ARC_CUTOFF = '2027-01-01';
+    if (new Date().toISOString().slice(0, 10) < WINTER_ARC_CUTOFF) {
+      supabase
+        .from('profile')
+        .select('seen_winter_arc_popup')
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data && !data.seen_winter_arc_popup) setShowWinterArc(true);
+        });
+    }
   }, []);
+
+  async function dismissWinterArc() {
+    setShowWinterArc(false);
+    await supabase.from('profile').upsert({ seen_winter_arc_popup: true });
+  }
 
   async function load() {
     const [{ data: sessionsData }, { data: runsData }] = await Promise.all([
@@ -186,6 +204,7 @@ export default function HomePage() {
     </PullToRefresh>
     {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
     {showRecap && <WeeklyRecapModal onClose={() => setShowRecap(false)} />}
+    {!showWelcome && showWinterArc && <WinterArcModal onClose={dismissWinterArc} />}
     </>
   );
 }
