@@ -124,8 +124,10 @@ export interface Profile {
   unit_system: 'metric' | 'imperial';
   morning_motivation_enabled: boolean;
   morning_motivation_hour: number;
+  morning_motivation_minute: number;
   supplement_reminder_enabled: boolean;
   supplement_reminder_hour: number;
+  supplement_reminder_minute: number;
   updated_at: string;
 }
 

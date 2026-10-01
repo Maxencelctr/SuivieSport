@@ -52,8 +52,10 @@ export default function ProfilPage() {
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
   const [morningMotivation, setMorningMotivation] = useState(true);
   const [morningHour, setMorningHour] = useState(9);
+  const [morningMinute, setMorningMinute] = useState(0);
   const [supplementReminder, setSupplementReminder] = useState(true);
   const [supplementHour, setSupplementHour] = useState(20);
+  const [supplementMinute, setSupplementMinute] = useState(0);
   const [schedule, setSchedule] = useState<Record<number, string>>({});
   const [savingSchedule, setSavingSchedule] = useState(false);
 
@@ -71,8 +73,10 @@ export default function ProfilPage() {
         if (data.unit_system) setUnitSystem(data.unit_system);
         if (data.morning_motivation_enabled != null) setMorningMotivation(data.morning_motivation_enabled);
         if (data.morning_motivation_hour != null) setMorningHour(data.morning_motivation_hour);
+        if (data.morning_motivation_minute != null) setMorningMinute(data.morning_motivation_minute);
         if (data.supplement_reminder_enabled != null) setSupplementReminder(data.supplement_reminder_enabled);
         if (data.supplement_reminder_hour != null) setSupplementHour(data.supplement_reminder_hour);
+        if (data.supplement_reminder_minute != null) setSupplementMinute(data.supplement_reminder_minute);
       }
       setLoading(false);
     });
@@ -127,8 +131,10 @@ export default function ProfilPage() {
       unit_system: unitSystem,
       morning_motivation_enabled: morningMotivation,
       morning_motivation_hour: morningHour,
+      morning_motivation_minute: morningMinute,
       supplement_reminder_enabled: supplementReminder,
       supplement_reminder_hour: supplementHour,
+      supplement_reminder_minute: supplementMinute,
       updated_at: new Date().toISOString(),
     });
     setSaving(false);
@@ -281,15 +287,18 @@ export default function ProfilPage() {
             <span className="truncate">Message de motivation</span>
           </label>
           {morningMotivation && (
-            <select
-              value={morningHour}
-              onChange={(e) => setMorningHour(Number(e.target.value))}
-              className="w-auto shrink-0"
-            >
-              {Array.from({ length: 24 }, (_, h) => (
-                <option key={h} value={h}>{h.toString().padStart(2, '0')}h</option>
-              ))}
-            </select>
+            <span className="flex items-center gap-1 shrink-0">
+              <select value={morningHour} onChange={(e) => setMorningHour(Number(e.target.value))} className="w-auto">
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{h.toString().padStart(2, '0')}h</option>
+                ))}
+              </select>
+              <select value={morningMinute} onChange={(e) => setMorningMinute(Number(e.target.value))} className="w-auto">
+                {[0, 15, 30, 45].map((m) => (
+                  <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
+                ))}
+              </select>
+            </span>
           )}
         </div>
 
@@ -299,20 +308,23 @@ export default function ProfilPage() {
             <span className="truncate">Rappel compléments non pris</span>
           </label>
           {supplementReminder && (
-            <select
-              value={supplementHour}
-              onChange={(e) => setSupplementHour(Number(e.target.value))}
-              className="w-auto shrink-0"
-            >
-              {Array.from({ length: 24 }, (_, h) => (
-                <option key={h} value={h}>{h.toString().padStart(2, '0')}h</option>
-              ))}
-            </select>
+            <span className="flex items-center gap-1 shrink-0">
+              <select value={supplementHour} onChange={(e) => setSupplementHour(Number(e.target.value))} className="w-auto">
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={h}>{h.toString().padStart(2, '0')}h</option>
+                ))}
+              </select>
+              <select value={supplementMinute} onChange={(e) => setSupplementMinute(Number(e.target.value))} className="w-auto">
+                {[0, 15, 30, 45].map((m) => (
+                  <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>
+                ))}
+              </select>
+            </span>
           )}
         </div>
 
         <p className="text-[11px] text-neutral-600">
-          Vérifié une fois par heure — la notif arrive dans l'heure choisie (marge de quelques minutes possible).
+          Vérifié toutes les 15 minutes — la notif arrive à l'heure choisie (marge de quelques minutes possible).
         </p>
       </div>
 

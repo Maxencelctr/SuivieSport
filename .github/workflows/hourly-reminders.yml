@@ -1,14 +1,16 @@
 name: Hourly reminders
 
 # Le plan Vercel Hobby n'autorise que des cron jobs quotidiens (une fois par
-# jour max) — impossible d'y déclencher une vérification toutes les heures
-# pour respecter l'horaire choisi par chaque utilisateur. On utilise donc
-# GitHub Actions (gratuit, sans cette limite) pour appeler les mêmes routes
-# API toutes les heures à la place du cron Vercel.
+# jour max) — impossible d'y déclencher une vérification toutes les 15
+# minutes pour respecter l'horaire (heure + minute) choisi par chaque
+# utilisateur. On utilise donc GitHub Actions (gratuit, sans cette limite)
+# pour appeler les mêmes routes API à la place du cron Vercel.
+# GitHub ne garantit pas la minute exacte (jusqu'à quelques minutes de
+# retard possible), mais la fréquence reste 1x/15min.
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 jobs:
