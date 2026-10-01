@@ -336,8 +336,8 @@ export default function AmisPage() {
           body: JSON.stringify({
             accessToken,
             targetUserId: selectedFriend,
-            title: `Défi de ${fromLabel}`,
-            body: message.trim(),
+            title: 'Nouveau défi 🔥',
+            body: `${fromLabel} te met au défi de faire : ${message.trim()}`,
           }),
         });
         if (res.ok) {
@@ -600,12 +600,12 @@ export default function AmisPage() {
             .filter((c) => c.status === 'pending')
             .map((c) => (
               <div key={c.id} className="card space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Flame size={16} className="text-accent shrink-0" />
-                  <span className="font-medium">{c.message}</span>
-                </div>
-                <div className="text-xs text-neutral-500">
-                  De <RankedName label={friendLabel(c.from_user_id)} rank={rankFor(c.from_user_id)} />
+                <div className="flex items-start gap-2 text-sm">
+                  <Flame size={16} className="text-accent shrink-0 mt-0.5" />
+                  <span>
+                    <RankedName label={friendLabel(c.from_user_id)} rank={rankFor(c.from_user_id)} className="font-medium" /> te
+                    met au défi de faire : <span className="font-medium">{c.message}</span>
+                  </span>
                 </div>
                 <div className="flex gap-2">
                   <button
