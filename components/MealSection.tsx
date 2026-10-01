@@ -88,13 +88,20 @@ export default function MealSection({
         <div className="space-y-1">
           {entries.map((e) => (
             <SwipeToDelete key={e.id} onDelete={() => deleteEntry(e.id)}>
-              <div className="flex justify-between items-center text-sm border-b border-[#262626] py-1 last:border-0 px-0.5">
-                <div>
-                  <div>{e.name}</div>
+              <div className="flex justify-between items-center text-sm border-b border-[#262626] py-1 last:border-0 px-0.5 gap-2">
+                <div className="min-w-0">
+                  <div className="truncate">{e.name}</div>
                   <div className="text-xs text-neutral-500">
                     {e.quantity_g}g — {e.protein_g}g prot{e.calories_kcal ? ` — ${e.calories_kcal} kcal` : ''}
                   </div>
                 </div>
+                <button
+                  onClick={() => deleteEntry(e.id)}
+                  aria-label="Supprimer"
+                  className="shrink-0 p-1.5 text-neutral-500 hover:text-red-500"
+                >
+                  <Trash2 size={15} />
+                </button>
               </div>
             </SwipeToDelete>
           ))}

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Settings, Dumbbell, Footprints, Utensils, Target, Angry, Frown, Meh, Smile, Laugh, Share2 } from 'lucide-react';
+import { Settings, Dumbbell, Footprints, Utensils, Target, Angry, Frown, Meh, Smile, Laugh, Share2, Megaphone } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { StrengthSession, Run } from '@/lib/types';
+import { StrengthSession, Run, AppEvent } from '@/lib/types';
 import { RUN_TYPE_LABELS } from '@/lib/running';
 import Resume from '@/components/Resume';
 import QuickAdd from '@/components/QuickAdd';
@@ -12,7 +12,6 @@ import PullToRefresh from '@/components/PullToRefresh';
 import Streak from '@/components/Streak';
 import WelcomeModal from '@/components/WelcomeModal';
 import WeeklyRecapModal from '@/components/WeeklyRecapModal';
-import WinterArcModal from '@/components/WinterArcModal';
 import ActivityFeed from '@/components/ActivityFeed';
 
 const FEELING_ICONS: Record<number, { icon: typeof Meh; className: string }> = {
@@ -30,7 +29,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
   const [showRecap, setShowRecap] = useState(false);
-  const [showWinterArc, setShowWinterArc] = useState(false);
+  const [activeEvents, setActiveEvents] = useState<AppEvent[]>([]);
 
   useEffect(() => {
     load();
@@ -39,22 +38,15 @@ export default function HomePage() {
       setShowWelcome(true);
     }
 
-    const WINTER_ARC_CUTOFF = '2027-01-01';
-    if (new Date().toISOString().slice(0, 10) < WINTER_ARC_CUTOFF) {
-      supabase
-        .from('profile')
-        .select('seen_winter_arc_popup')
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data && !data.seen_winter_arc_popup) setShowWinterArc(true);
-        });
-    }
+    const now = new Date().toISOString();
+    supabase
+      .from('app_events')
+      .select('*')
+      .lte('starts_at', now)
+      .gte('ends_at', now)
+      .order('starts_at', { ascending: false })
+      .then(({ data }) => setActiveEvents(data ?? []));
   }, []);
-
-  async function dismissWinterArc() {
-    setShowWinterArc(false);
-    await supabase.from('profile').upsert({ seen_winter_arc_popup: true });
-  }
 
   async function load() {
     const [{ data: sessionsData }, { data: runsData }] = await Promise.all([
@@ -93,6 +85,21 @@ export default function HomePage() {
           <Link href="/bilan" className="text-sm text-accent">Bilan →</Link>
         </div>
       </div>
+
+      {activeEvents.length > 0 && (
+        <Link href="/actualites" className="card flex items-center gap-3 border-accent/40 hover:border-accent transition-colors">
+          <Megaphone size={18} className="text-accent shrink-0" />
+          <div className="min-w-0 flex-1">
+            {activeEvents.map((ev) => (
+              <div key={ev.id} className="text-sm truncate">
+                {ev.emoji && <span className="mr-1">{ev.emoji}</span>}
+                <span className="font-medium">{ev.title}</span>
+              </div>
+            ))}
+          </div>
+          <span className="text-xs text-accent shrink-0">Voir →</span>
+        </Link>
+      )}
 
       <Streak />
 
@@ -204,7 +211,6 @@ export default function HomePage() {
     </PullToRefresh>
     {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
     {showRecap && <WeeklyRecapModal onClose={() => setShowRecap(false)} />}
-    {!showWelcome && showWinterArc && <WinterArcModal onClose={dismissWinterArc} />}
     </>
   );
 }
