@@ -28,6 +28,34 @@ export default function ParametresPage() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importLog, setImportLog] = useState<string[]>([]);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  async function changePassword() {
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    if (newPassword.length < 6) {
+      setPasswordError('6 caractères minimum.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Les deux mots de passe ne correspondent pas.');
+      return;
+    }
+    setChangingPassword(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setChangingPassword(false);
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordSuccess(true);
+  }
 
   async function exportData() {
     setExporting(true);
@@ -90,6 +118,27 @@ export default function ParametresPage() {
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Paramètres</h2>
         <Link href="/" className="text-sm text-neutral-400">← Accueil</Link>
+      </div>
+
+      <div className="card space-y-3">
+        <div className="font-medium text-sm">Changer mon mot de passe</div>
+        <input
+          type="password"
+          placeholder="Nouveau mot de passe"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Confirmer le mot de passe"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+        {passwordError && <p className="text-red-400 text-xs">{passwordError}</p>}
+        {passwordSuccess && <p className="text-accent text-xs">Mot de passe mis à jour.</p>}
+        <button onClick={changePassword} disabled={changingPassword || !newPassword} className="btn-primary w-full">
+          {changingPassword ? '...' : 'Changer le mot de passe'}
+        </button>
       </div>
 
       <div className="card space-y-3">

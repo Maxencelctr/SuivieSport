@@ -27,6 +27,7 @@ export interface StrengthSet {
   reps: number;
   weight_kg: number;
   side: 'gauche' | 'droit' | null;
+  rpe: number | null;
   created_at: string;
 }
 
@@ -41,6 +42,13 @@ export interface Run {
   weather: 'soleil' | 'pluie' | 'froid' | 'chaud' | null;
   feeling: string | null;
   notes: string | null;
+  created_at: string;
+}
+
+export interface ProgressPhoto {
+  id: string;
+  date: string;
+  path: string;
   created_at: string;
 }
 
@@ -72,6 +80,26 @@ export interface FoodEntry {
   off_code: string | null;
   meal: Meal | null;
   created_at: string;
+}
+
+export interface MealPresetItem {
+  id: string;
+  preset_id: string;
+  name: string;
+  quantity_g: number;
+  protein_g: number;
+  calories_kcal: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  off_code: string | null;
+}
+
+export interface MealPreset {
+  id: string;
+  name: string;
+  meal: Meal;
+  created_at: string;
+  meal_preset_items: MealPresetItem[];
 }
 
 export interface CustomFood {
@@ -189,8 +217,8 @@ export interface FriendRequest {
 export interface LeaderboardEntry {
   person_id: string;
   label: string;
-  volume_7j: number;
-  km_7j: number;
+  volume: number;
+  km: number;
 }
 
 export type ChallengeStatus = 'pending' | 'done' | 'dismissed';

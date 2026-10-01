@@ -8,6 +8,7 @@ export interface QueuedSet {
   reps: number;
   weight_kg: number;
   side: 'gauche' | 'droit' | null;
+  rpe: number | null;
 }
 
 export interface QueuedSession {
@@ -36,6 +37,11 @@ export function getQueue(): QueuedSession[] {
 
 function setQueue(queue: QueuedSession[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+  // Permet à un badge (ex: Nav) de réagir tout de suite sans poll ni
+  // changement de page — localStorage seul ne notifie pas les autres
+  // composants de l'onglet courant (l'event "storage" du navigateur ne se
+  // déclenche que pour les AUTRES onglets).
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('volt:offline-queue'));
 }
 
 export function queueSession(payload: Omit<QueuedSession, 'id' | 'queuedAt'>): QueuedSession {

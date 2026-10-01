@@ -16,6 +16,7 @@ interface BlockRow {
   reps: number;
   reps_right: number;
   weight_kg: number;
+  rpe: number | null;
 }
 
 interface InitialBlock {
@@ -44,7 +45,7 @@ function buildInitialBlocks(sets: StrengthSet[], exerciseById: Map<string, Exerc
     if (!unilateral) {
       const rows = [...exSets]
         .sort((a, b) => a.set_number - b.set_number)
-        .map((s) => ({ reps: s.reps, reps_right: s.reps, weight_kg: Number(s.weight_kg) }));
+        .map((s) => ({ reps: s.reps, reps_right: s.reps, weight_kg: Number(s.weight_kg), rpe: s.rpe ?? null }));
       blocks.push({ key: genKey(), exercise: ex, rows, unilateral: false });
       return;
     }
@@ -58,6 +59,7 @@ function buildInitialBlocks(sets: StrengthSet[], exerciseById: Map<string, Exerc
         reps: left[i]?.reps ?? right[i]?.reps ?? 10,
         reps_right: right[i]?.reps ?? left[i]?.reps ?? 10,
         weight_kg: Number(left[i]?.weight_kg ?? right[i]?.weight_kg ?? 20),
+        rpe: left[i]?.rpe ?? right[i]?.rpe ?? null,
       });
     }
     blocks.push({ key: genKey(), exercise: ex, rows, unilateral: true });
@@ -157,6 +159,7 @@ export default function SeanceDetailPage({ params }: { params: Promise<{ id: str
           reps: s.reps,
           weight_kg: s.weight_kg,
           side: s.side,
+          rpe: s.rpe,
         };
       })
     );

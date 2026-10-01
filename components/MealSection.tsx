@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Star, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { CustomFood, FoodEntry, Meal } from '@/lib/types';
+import { CustomFood, FoodEntry, Meal, MealPreset } from '@/lib/types';
 import { MEAL_ICONS, MEAL_LABELS } from '@/lib/meals';
 import FoodPicker from './FoodPicker';
 import SwipeToDelete from './SwipeToDelete';
@@ -13,10 +14,25 @@ interface MealSectionProps {
   entries: FoodEntry[];
   customFoods: CustomFood[];
   onChange: () => void;
+  presets: MealPreset[];
+  onSavePreset: (name: string) => void;
+  onLogPreset: (preset: MealPreset) => void;
+  onDeletePreset: (presetId: string) => void;
 }
 
-export default function MealSection({ meal, date, entries, customFoods, onChange }: MealSectionProps) {
+export default function MealSection({
+  meal,
+  date,
+  entries,
+  customFoods,
+  onChange,
+  presets,
+  onSavePreset,
+  onLogPreset,
+  onDeletePreset,
+}: MealSectionProps) {
   const [adding, setAdding] = useState(false);
+  const [savingPreset, setSavingPreset] = useState(false);
   const MealIcon = MEAL_ICONS[meal];
 
   const protein = entries.reduce((s, e) => s + Number(e.protein_g), 0);
@@ -25,6 +41,14 @@ export default function MealSection({ meal, date, entries, customFoods, onChange
   async function deleteEntry(id: string) {
     await supabase.from('food_entries').delete().eq('id', id);
     onChange();
+  }
+
+  function handleSavePreset() {
+    const name = prompt(`Nom de ce ${MEAL_LABELS[meal].toLowerCase()} habituel ?`, MEAL_LABELS[meal]);
+    if (!name?.trim()) return;
+    setSavingPreset(true);
+    onSavePreset(name.trim());
+    setTimeout(() => setSavingPreset(false), 500);
   }
 
   return (
@@ -41,6 +65,25 @@ export default function MealSection({ meal, date, entries, customFoods, onChange
         )}
       </div>
 
+      {presets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map((p) => (
+            <div key={p.id} className="flex items-center gap-1 text-xs bg-[#0a0a0b] border border-[#26262a] rounded-full pl-2.5 pr-1 py-1">
+              <button onClick={() => onLogPreset(p)} className="text-accent font-medium">
+                + {p.name}
+              </button>
+              <button
+                onClick={() => confirm(`Supprimer le repas habituel "${p.name}" ?`) && onDeletePreset(p.id)}
+                className="text-neutral-600 hover:text-red-500 p-0.5"
+                aria-label="Supprimer"
+              >
+                <Trash2 size={11} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {entries.length > 0 && (
         <div className="space-y-1">
           {entries.map((e) => (
@@ -55,6 +98,13 @@ export default function MealSection({ meal, date, entries, customFoods, onChange
               </div>
             </SwipeToDelete>
           ))}
+          <button
+            onClick={handleSavePreset}
+            disabled={savingPreset}
+            className="flex items-center gap-1 text-xs text-neutral-500 hover:text-volt pt-1"
+          >
+            <Star size={12} /> Enregistrer comme repas habituel
+          </button>
         </div>
       )}
 

@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { ArrowLeft, Dumbbell, Footprints, Home, LogOut, Users, Utensils } from 'lucide-react';
+import { ArrowLeft, CloudOff, Dumbbell, Footprints, Home, LogOut, Users, Utensils } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { signOutAndClear } from '@/lib/auth';
 import { haptic } from '@/lib/haptics';
+import { getQueue } from '@/lib/offlineQueue';
 import { useAuth } from './AuthProvider';
 import Avatar from './Avatar';
 
@@ -41,6 +42,14 @@ export default function Nav() {
   const { user } = useAuth();
   const [pendingChallenges, setPendingChallenges] = useState(0);
   const [profile, setProfile] = useState<{ pseudo: string | null; avatar_url: string | null } | null>(null);
+  const [offlineCount, setOfflineCount] = useState(0);
+
+  useEffect(() => {
+    const update = () => setOfflineCount(getQueue().length);
+    update();
+    window.addEventListener('volt:offline-queue', update);
+    return () => window.removeEventListener('volt:offline-queue', update);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -159,6 +168,14 @@ export default function Nav() {
             {tab.href === '/amis' && pendingChallenges > 0 && (
               <span className="absolute top-1 right-[22%] min-w-[15px] h-[15px] px-0.5 rounded-full bg-accent text-white text-[9px] font-semibold flex items-center justify-center">
                 {pendingChallenges}
+              </span>
+            )}
+            {tab.href === '/musculation' && offlineCount > 0 && (
+              <span
+                className="absolute top-1 right-[22%] min-w-[15px] h-[15px] px-0.5 rounded-full bg-amber-500 text-black text-[9px] font-semibold flex items-center justify-center"
+                title={`${offlineCount} séance(s) en attente de synchro`}
+              >
+                <CloudOff size={10} />
               </span>
             )}
           </Link>

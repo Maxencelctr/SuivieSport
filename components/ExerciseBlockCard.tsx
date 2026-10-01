@@ -11,11 +11,12 @@ interface SetRow {
   reps: number; // reps bilatéral, ou côté gauche si unilatéral
   reps_right: number; // utilisé seulement si unilatéral
   weight_kg: number;
+  rpe: number | null; // effort perçu (1-10), optionnel
 }
 
 export interface ExerciseBlockResult {
   exercise: Exercise;
-  sets: { reps: number; weight_kg: number; side: 'gauche' | 'droit' | null }[];
+  sets: { reps: number; weight_kg: number; side: 'gauche' | 'droit' | null; rpe: number | null }[];
 }
 
 export interface ExerciseBlockHandle {
@@ -69,7 +70,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     setRows((prev) => {
       const next: SetRow[] = [];
       for (let i = 0; i < numSets; i++) {
-        next.push(prev[i] ?? { reps: defaultReps, reps_right: defaultReps, weight_kg: defaultWeight });
+        next.push(prev[i] ?? { reps: defaultReps, reps_right: defaultReps, weight_kg: defaultWeight, rpe: null });
       }
       return next;
     });
@@ -115,10 +116,10 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
         if (!exercise || rows.length === 0) return null;
         const sets = unilateral
           ? rows.flatMap((r) => [
-              { reps: r.reps, weight_kg: r.weight_kg, side: 'gauche' as const },
-              { reps: r.reps_right, weight_kg: r.weight_kg, side: 'droit' as const },
+              { reps: r.reps, weight_kg: r.weight_kg, side: 'gauche' as const, rpe: r.rpe },
+              { reps: r.reps_right, weight_kg: r.weight_kg, side: 'droit' as const, rpe: r.rpe },
             ])
-          : rows.map((r) => ({ reps: r.reps, weight_kg: r.weight_kg, side: null }));
+          : rows.map((r) => ({ reps: r.reps, weight_kg: r.weight_kg, side: null, rpe: r.rpe }));
         return { exercise, sets };
       },
     }),
@@ -130,7 +131,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     setMuscleNames(names);
   }
 
-  function updateRow(i: number, field: 'reps' | 'reps_right' | 'weight_kg', value: number) {
+  function updateRow(i: number, field: 'reps' | 'reps_right' | 'weight_kg' | 'rpe', value: number | null) {
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, [field]: value } : r)));
   }
 
@@ -142,7 +143,7 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
     if (!suggestion) return;
     const newReps = type === 'reps' ? suggestion.reps + 1 : suggestion.reps;
     const newWeight = type === 'weight' ? Math.max(0, Math.round((suggestion.weight + weightStep) * 2) / 2) : suggestion.weight;
-    setRows(rows.map(() => ({ reps: newReps, reps_right: newReps, weight_kg: newWeight })));
+    setRows(rows.map((r) => ({ reps: newReps, reps_right: newReps, weight_kg: newWeight, rpe: r.rpe })));
   }
 
   return (
@@ -225,16 +226,17 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
 
           <div className="space-y-2">
             {unilateral && (
-              <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 text-[10px] text-neutral-500 px-0">
+              <div className="grid grid-cols-[auto_1fr_1fr_1fr_54px] gap-2 text-[10px] text-neutral-500 px-0">
                 <span className="w-14" />
                 <span>Reps gauche</span>
                 <span>Reps droit</span>
                 <span>Poids (kg)</span>
+                <span>RPE</span>
               </div>
             )}
             {rows.map((row, i) =>
               unilateral ? (
-                <div key={i} className="grid grid-cols-[auto_1fr_1fr_1fr] gap-2 items-center">
+                <div key={i} className="grid grid-cols-[auto_1fr_1fr_1fr_54px] gap-2 items-center">
                   <span className="text-xs text-neutral-500 w-14">Série {i + 1}</span>
                   <input
                     type="number"
@@ -255,9 +257,19 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
                     min={0}
                     step={0.5}
                   />
+                  <select
+                    value={row.rpe ?? ''}
+                    onChange={(e) => updateRow(i, 'rpe', e.target.value ? Number(e.target.value) : null)}
+                    className="px-1"
+                  >
+                    <option value="">—</option>
+                    {Array.from({ length: 10 }, (_, n) => n + 1).map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
                 </div>
               ) : (
-                <div key={i} className="grid grid-cols-[auto_1fr_1fr] gap-2 items-center">
+                <div key={i} className="grid grid-cols-[auto_1fr_1fr_54px] gap-2 items-center">
                   <span className="text-xs text-neutral-500 w-14">Série {i + 1}</span>
                   <div>
                     <label className="text-[10px] text-neutral-500">Reps</label>
@@ -277,6 +289,19 @@ const ExerciseBlockCard = forwardRef<ExerciseBlockHandle, ExerciseBlockCardProps
                       min={0}
                       step={0.5}
                     />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-neutral-500">RPE</label>
+                    <select
+                      value={row.rpe ?? ''}
+                      onChange={(e) => updateRow(i, 'rpe', e.target.value ? Number(e.target.value) : null)}
+                      className="px-1"
+                    >
+                      <option value="">—</option>
+                      {Array.from({ length: 10 }, (_, n) => n + 1).map((n) => (
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               )

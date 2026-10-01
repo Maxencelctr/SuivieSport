@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PartyPopper, Trophy } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { supabase } from '@/lib/supabase';
 import { Exercise } from '@/lib/types';
 import ExerciseBlockCard, { ExerciseBlockHandle } from '@/components/ExerciseBlockCard';
@@ -13,7 +14,7 @@ import { queueSession } from '@/lib/offlineQueue';
 interface PrefillBlock {
   key: string;
   initialExercise?: Exercise | null;
-  initialRows?: { reps: number; reps_right: number; weight_kg: number }[];
+  initialRows?: { reps: number; reps_right: number; weight_kg: number; rpe: number | null }[];
   initialUnilateral?: boolean;
 }
 
@@ -83,7 +84,7 @@ export default function NouvelleSeancePage() {
 
     supabase
       .from('strength_sets')
-      .select('exercise_id, set_number, reps, weight_kg, side')
+      .select('exercise_id, set_number, reps, weight_kg, side, rpe')
       .eq('session_id', repeatId)
       .order('set_number')
       .then(({ data: sets }) => {
@@ -103,11 +104,13 @@ export default function NouvelleSeancePage() {
           const exercise = exercises.find((e) => e.id === exerciseId) ?? null;
           const unilateral = exSets.some((s) => s.side != null);
 
-          let rows: { reps: number; reps_right: number; weight_kg: number }[];
+          // On ne reprend pas le RPE d'avant : l'effort perçu est propre à
+          // chaque séance, pas une valeur à dupliquer.
+          let rows: { reps: number; reps_right: number; weight_kg: number; rpe: number | null }[];
           if (unilateral) {
-            const bySetNum = new Map<number, { reps: number; reps_right: number; weight_kg: number }>();
+            const bySetNum = new Map<number, { reps: number; reps_right: number; weight_kg: number; rpe: number | null }>();
             exSets.forEach((s) => {
-              const row = bySetNum.get(s.set_number) ?? { reps: 0, reps_right: 0, weight_kg: Number(s.weight_kg) };
+              const row = bySetNum.get(s.set_number) ?? { reps: 0, reps_right: 0, weight_kg: Number(s.weight_kg), rpe: null };
               if (s.side === 'droit') row.reps_right = s.reps;
               else row.reps = s.reps;
               row.weight_kg = Number(s.weight_kg);
@@ -115,7 +118,7 @@ export default function NouvelleSeancePage() {
             });
             rows = Array.from(bySetNum.values());
           } else {
-            rows = exSets.map((s) => ({ reps: s.reps, reps_right: s.reps, weight_kg: Number(s.weight_kg) }));
+            rows = exSets.map((s) => ({ reps: s.reps, reps_right: s.reps, weight_kg: Number(s.weight_kg), rpe: null }));
           }
 
           return { key: genKey(), initialExercise: exercise, initialRows: rows, initialUnilateral: unilateral };
@@ -164,6 +167,7 @@ export default function NouvelleSeancePage() {
           reps: s.reps,
           weight_kg: s.weight_kg,
           side: s.side,
+          rpe: s.rpe,
         };
       })
     );
@@ -241,6 +245,7 @@ export default function NouvelleSeancePage() {
 
     if (newPRs.length > 0) {
       setPrList(newPRs);
+      confetti({ particleCount: 140, spread: 80, origin: { y: 0.35 }, colors: ['#A78BFA', '#7C3AED', '#A3E635'] });
     } else {
       router.push('/musculation');
     }

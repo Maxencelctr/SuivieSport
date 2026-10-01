@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Pill, Droplet, Check, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { FoodEntry, Profile, CustomFood, WaterEntry, Supplement, SupplementLog } from '@/lib/types';
+import { FoodEntry, Profile, CustomFood, WaterEntry, Supplement, SupplementLog, MealPreset, Meal } from '@/lib/types';
 import { computeBMR, computeTDEE, computeCalorieTarget, computeProteinTarget, computeMacroTargets } from '@/lib/nutrition';
 import { COMMON_PROTEIN_FOODS, suggestedQuantity } from '@/lib/proteinSuggestions';
 import { runningCalories, strengthCalories, DEFAULT_STRENGTH_DURATION_MIN } from '@/lib/calorieBurn';
@@ -29,6 +29,7 @@ export default function AlimentationPage() {
   const [trainingLabel, setTrainingLabel] = useState<string | null>(null);
 
   const [customFoods, setCustomFoods] = useState<CustomFood[]>([]);
+  const [mealPresets, setMealPresets] = useState<MealPreset[]>([]);
 
   const [waterEntries, setWaterEntries] = useState<WaterEntry[]>([]);
   const [customWater, setCustomWater] = useState(200);
@@ -200,6 +201,60 @@ export default function AlimentationPage() {
         setFrequentFoods(top);
       });
   }, []);
+
+  useEffect(() => {
+    loadMealPresets();
+  }, []);
+
+  async function loadMealPresets() {
+    const { data } = await supabase
+      .from('meal_presets')
+      .select('*, meal_preset_items(*)')
+      .order('created_at');
+    setMealPresets((data ?? []) as MealPreset[]);
+  }
+
+  async function savePreset(meal: Meal, name: string) {
+    const items = entries.filter((e) => e.meal === meal);
+    if (items.length === 0) return;
+    const { data: preset, error } = await supabase.from('meal_presets').insert({ name, meal }).select().single();
+    if (error || !preset) return;
+    await supabase.from('meal_preset_items').insert(
+      items.map((e) => ({
+        preset_id: preset.id,
+        name: e.name,
+        quantity_g: e.quantity_g,
+        protein_g: e.protein_g,
+        calories_kcal: e.calories_kcal,
+        carbs_g: e.carbs_g,
+        fat_g: e.fat_g,
+        off_code: e.off_code,
+      }))
+    );
+    await loadMealPresets();
+  }
+
+  async function logPreset(preset: MealPreset) {
+    await supabase.from('food_entries').insert(
+      preset.meal_preset_items.map((item) => ({
+        date,
+        meal: preset.meal,
+        name: item.name,
+        quantity_g: item.quantity_g,
+        protein_g: item.protein_g,
+        calories_kcal: item.calories_kcal,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+        off_code: item.off_code,
+      }))
+    );
+    await loadEntries(date);
+  }
+
+  async function deletePreset(presetId: string) {
+    await supabase.from('meal_presets').delete().eq('id', presetId);
+    await loadMealPresets();
+  }
 
   async function addFrequent(food: FoodEntry) {
     await supabase.from('food_entries').insert({
@@ -436,7 +491,18 @@ export default function AlimentationPage() {
       ) : (
         <div className="space-y-3">
           {entriesByMeal.map(({ meal, items }) => (
-            <MealSection key={meal} meal={meal} date={date} entries={items} customFoods={customFoods} onChange={() => loadEntries(date)} />
+            <MealSection
+              key={meal}
+              meal={meal}
+              date={date}
+              entries={items}
+              customFoods={customFoods}
+              onChange={() => loadEntries(date)}
+              presets={mealPresets.filter((p) => p.meal === meal)}
+              onSavePreset={(name) => savePreset(meal, name)}
+              onLogPreset={logPreset}
+              onDeletePreset={deletePreset}
+            />
           ))}
 
           {unclassified.length > 0 && (

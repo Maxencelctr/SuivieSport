@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Star } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Exercise } from '@/lib/types';
 
@@ -42,6 +43,31 @@ export default function ExercisePicker({
   const [wgerResults, setWgerResults] = useState<WgerResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [addingWgerId, setAddingWgerId] = useState<number | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    supabase
+      .from('exercise_favorites')
+      .select('exercise_id')
+      .then(({ data }) => setFavoriteIds(new Set((data ?? []).map((r: any) => r.exercise_id))));
+  }, []);
+
+  async function toggleFavorite(e: React.MouseEvent, exerciseId: string) {
+    e.stopPropagation();
+    e.preventDefault();
+    const isFav = favoriteIds.has(exerciseId);
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (isFav) next.delete(exerciseId);
+      else next.add(exerciseId);
+      return next;
+    });
+    if (isFav) {
+      await supabase.from('exercise_favorites').delete().eq('exercise_id', exerciseId);
+    } else {
+      await supabase.from('exercise_favorites').upsert({ exercise_id: exerciseId }, { onConflict: 'user_id,exercise_id' });
+    }
+  }
 
   useEffect(() => {
     if (query.trim().length < 2) {
@@ -67,6 +93,7 @@ export default function ExercisePicker({
   const localMatches = needle.length >= 1 ? exercises.filter((e) => e.name.toLowerCase().includes(needle)) : [];
   const localWgerIds = new Set(exercises.map((e) => e.wger_id).filter(Boolean));
   const newWgerResults = wgerResults.filter((r) => !localWgerIds.has(r.wger_id));
+  const favoriteExercises = needle.length === 0 ? exercises.filter((e) => favoriteIds.has(e.id)) : [];
 
   function selectLocal(ex: Exercise) {
     onSelect(ex, muscleNamesByExercise[ex.id] ?? []);
@@ -114,7 +141,10 @@ export default function ExercisePicker({
     }
   }
 
-  const showDropdown = open && needle.length >= 1 && (localMatches.length > 0 || newWgerResults.length > 0 || searching);
+  const showDropdown =
+    open &&
+    ((needle.length >= 1 && (localMatches.length > 0 || newWgerResults.length > 0 || searching)) ||
+      (needle.length === 0 && favoriteExercises.length > 0));
 
   return (
     <div className="relative">
@@ -130,6 +160,27 @@ export default function ExercisePicker({
       />
       {showDropdown && (
         <div className="absolute z-10 mt-1 w-full bg-[#141414] border border-[#333] rounded-lg max-h-64 overflow-y-auto">
+          {favoriteExercises.length > 0 && (
+            <div>
+              <div className="px-3 pt-2 pb-1 text-[10px] uppercase text-neutral-500">Favoris</div>
+              {favoriteExercises.map((ex) => (
+                <button
+                  key={ex.id}
+                  type="button"
+                  onMouseDown={() => selectLocal(ex)}
+                  className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex justify-between items-center gap-3"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Star size={13} className="text-volt fill-volt shrink-0" />
+                    {ex.name}
+                  </span>
+                  <span className="text-xs text-neutral-500 text-right">
+                    {muscleNamesByExercise[ex.id]?.join(', ') || ex.muscle_group}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
           {localMatches.length > 0 && (
             <div>
               <div className="px-3 pt-2 pb-1 text-[10px] uppercase text-neutral-500">Ta bibliothèque</div>
@@ -140,8 +191,18 @@ export default function ExercisePicker({
                   onMouseDown={() => selectLocal(ex)}
                   className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex justify-between items-center gap-3"
                 >
-                  <span>{ex.name}</span>
-                  <span className="text-xs text-neutral-500 text-right">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onMouseDown={(e) => toggleFavorite(e, ex.id)}
+                      className="shrink-0 p-0.5 -m-0.5"
+                    >
+                      <Star size={13} className={favoriteIds.has(ex.id) ? 'text-volt fill-volt' : 'text-neutral-600'} />
+                    </span>
+                    <span className="truncate">{ex.name}</span>
+                  </span>
+                  <span className="text-xs text-neutral-500 text-right shrink-0">
                     {muscleNamesByExercise[ex.id]?.join(', ') || ex.muscle_group}
                   </span>
                 </button>

@@ -45,7 +45,8 @@ export default function AmisPage() {
   const [challengeReactions, setChallengeReactions] = useState<Record<string, ReactionSummary[]>>({});
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [myRank, setMyRank] = useState('Débutant');
-  const [leaderboardMetric, setLeaderboardMetric] = useState<'volume_7j' | 'km_7j'>('volume_7j');
+  const [leaderboardMetric, setLeaderboardMetric] = useState<'volume' | 'km'>('volume');
+  const [leaderboardPeriod, setLeaderboardPeriod] = useState<7 | 30 | null>(7);
 
   // Compteurs légers pour les badges des onglets, chargés dès l'arrivée sur
   // la page. Le contenu détaillé (défis/duels/classement) n'est lui chargé
@@ -204,12 +205,17 @@ export default function AmisPage() {
     setChallengesLoading(false);
   }
 
-  async function loadLeaderboard() {
+  async function loadLeaderboard(period: 7 | 30 | null = leaderboardPeriod) {
     setLeaderboardLoading(true);
-    const { data } = await supabase.rpc('get_friends_leaderboard');
+    const { data } = await supabase.rpc('get_friends_leaderboard', { p_days: period });
     setLeaderboard(data ?? []);
     setLeaderboardLoaded(true);
     setLeaderboardLoading(false);
+  }
+
+  function changeLeaderboardPeriod(period: 7 | 30 | null) {
+    setLeaderboardPeriod(period);
+    loadLeaderboard(period);
   }
 
   async function loadDuels() {
@@ -695,28 +701,41 @@ export default function AmisPage() {
 
       {tab === 'classement' && friends.length > 0 && (
         <div className="card space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h3 className="eyebrow flex items-center gap-1.5">
-              <Trophy size={13} className="text-volt" /> Classement (7 derniers jours)
+              <Trophy size={13} className="text-volt" /> Classement
             </h3>
             <div className="flex gap-1 p-0.5 rounded-lg bg-[#0a0a0b] border border-[#26262a]">
               <button
-                onClick={() => setLeaderboardMetric('volume_7j')}
+                onClick={() => setLeaderboardMetric('volume')}
                 className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
-                  leaderboardMetric === 'volume_7j' ? 'bg-accent text-white' : 'text-neutral-400'
+                  leaderboardMetric === 'volume' ? 'bg-accent text-white' : 'text-neutral-400'
                 }`}
               >
                 Volume
               </button>
               <button
-                onClick={() => setLeaderboardMetric('km_7j')}
+                onClick={() => setLeaderboardMetric('km')}
                 className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
-                  leaderboardMetric === 'km_7j' ? 'bg-accent text-white' : 'text-neutral-400'
+                  leaderboardMetric === 'km' ? 'bg-accent text-white' : 'text-neutral-400'
                 }`}
               >
                 Km
               </button>
             </div>
+          </div>
+          <div className="flex gap-1 p-0.5 rounded-lg bg-[#0a0a0b] border border-[#26262a] w-fit">
+            {([[7, '7j'], [30, '30j'], [null, 'Tout']] as const).map(([period, label]) => (
+              <button
+                key={label}
+                onClick={() => changeLeaderboardPeriod(period)}
+                className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
+                  leaderboardPeriod === period ? 'bg-accent text-white' : 'text-neutral-400'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           <div className="space-y-1.5">
             {[...leaderboard]
@@ -732,9 +751,9 @@ export default function AmisPage() {
                     className="flex-1"
                   />
                   <span className="stat-number text-neutral-300">
-                    {leaderboardMetric === 'volume_7j'
-                      ? `${Math.round(entry.volume_7j).toLocaleString('fr-FR')}kg`
-                      : `${Math.round(entry.km_7j * 10) / 10}km`}
+                    {leaderboardMetric === 'volume'
+                      ? `${Math.round(entry.volume).toLocaleString('fr-FR')}kg`
+                      : `${Math.round(entry.km * 10) / 10}km`}
                   </span>
                 </div>
               ))}
