@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Calendar, LogOut, Settings, Target, TrendingUp } from 'lucide-react';
+import { Bell, Calendar, Footprints, LogOut, Settings, Target, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { signOutAndClear } from '@/lib/auth';
@@ -20,6 +20,7 @@ import { UnitSystem, displayWeight, toKg, weightUnitLabel } from '@/lib/units';
 const SECTIONS = [
   { href: '/calendrier', label: 'Calendrier', icon: Calendar },
   { href: '/objectifs', label: 'Objectifs', icon: Target },
+  { href: '/pas', label: 'Pas', icon: Footprints },
   { href: '/stats', label: 'Stats', icon: TrendingUp },
   { href: '/parametres', label: 'Paramètres', icon: Settings },
 ];

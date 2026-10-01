@@ -92,6 +92,16 @@ export interface WaterEntry {
   created_at: string;
 }
 
+export type StepSource = 'manual' | 'google_fit' | 'shortcuts';
+
+export interface StepEntry {
+  id: string;
+  date: string;
+  steps: number;
+  source: StepSource;
+  created_at: string;
+}
+
 export interface Supplement {
   name: string;
 }
@@ -128,6 +138,7 @@ export interface Profile {
   supplement_reminder_enabled: boolean;
   supplement_reminder_hour: number;
   supplement_reminder_minute: number;
+  step_goal: number | null;
   updated_at: string;
 }
 
