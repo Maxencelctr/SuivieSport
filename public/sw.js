@@ -52,6 +52,12 @@ self.addEventListener('push', (event) => {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       data: { url: data.url || '/amis' },
+      // Rend la notif plus "visible" (vibration + reste affichée tant
+      // qu'on n'interagit pas), mais l'affichage en bandeau en haut de
+      // l'écran dépend surtout de l'importance du canal de notif Android
+      // réglée côté système, pas de ces options.
+      vibrate: [200, 100, 200],
+      requireInteraction: true,
     })
   );
 });
