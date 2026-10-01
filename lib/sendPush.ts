@@ -25,7 +25,11 @@ export async function sendPushToAll<T extends Sub>(
     subs.map((s) =>
       webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth_key } },
-        JSON.stringify(payloadFor(s))
+        JSON.stringify(payloadFor(s)),
+        // "high" indique au service de push (FCM côté Android) de livrer
+        // tout de suite même si l'appareil est en veille/mode économie de
+        // batterie, au lieu de regrouper l'envoi avec d'autres plus tard.
+        { urgency: 'high' }
       )
     )
   );
