@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   try {
     const url =
       `https://search.openfoodfacts.org/search?q=${encodeURIComponent(term)}` +
-      `&page_size=15&fields=code,product_name,brands,nutriments`;
+      `&page_size=15&fields=code,product_name,brands,nutriments,image_small_url,image_front_small_url`;
 
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
 
@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         off_code: p.code ?? null,
         name: p.product_name as string,
         brand: Array.isArray(p.brands) ? p.brands.join(', ') : p.brands ?? null,
+        image_url: p.image_front_small_url ?? p.image_small_url ?? null,
         protein_100g: Number(p.nutriments.proteins_100g) || 0,
         calories_100g: Number(p.nutriments['energy-kcal_100g']) || null,
         carbs_100g: Number(p.nutriments.carbohydrates_100g) || null,

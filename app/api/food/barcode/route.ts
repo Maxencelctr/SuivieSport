@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,nutriments`;
+    const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=code,product_name,brands,nutriments,image_small_url,image_front_small_url`;
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
 
     if (!res.ok) {
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
         off_code: p.code ?? code,
         name: p.product_name as string,
         brand: Array.isArray(p.brands) ? p.brands.join(', ') : p.brands ?? null,
+        image_url: p.image_front_small_url ?? p.image_small_url ?? null,
         protein_100g: Number(n.proteins_100g) || 0,
         calories_100g: Number(n['energy-kcal_100g']) || null,
         carbs_100g: Number(n.carbohydrates_100g) || null,

@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { ScanLine } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { CustomFood, Meal } from '@/lib/types';
+import { findUnitPreset } from '@/lib/foodUnits';
 import BarcodeScanner from './BarcodeScanner';
 
 interface OffResult {
   off_code: string | null;
   name: string;
   brand: string | null;
+  image_url: string | null;
   protein_100g: number;
   calories_100g: number | null;
   carbs_100g: number | null;
@@ -39,6 +41,8 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
 
   const [picked, setPicked] = useState<Picked | null>(null);
   const [quantity, setQuantity] = useState(100);
+  const [unitMode, setUnitMode] = useState<'grams' | 'unit'>('grams');
+  const [unitCount, setUnitCount] = useState(1);
   const [saving, setSaving] = useState(false);
 
   const [manualOpen, setManualOpen] = useState(false);
@@ -75,15 +79,27 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
   const needle = query.trim().toLowerCase();
   const customMatches = needle.length >= 1 ? customFoods.filter((f) => f.name.toLowerCase().includes(needle)) : [];
 
+  function applyUnitDefault(name: string, fallbackQuantity: number) {
+    const preset = findUnitPreset(name);
+    if (preset) {
+      setUnitMode('unit');
+      setUnitCount(1);
+      setQuantity(preset.grams);
+    } else {
+      setUnitMode('grams');
+      setQuantity(fallbackQuantity);
+    }
+  }
+
   function selectCustom(food: CustomFood) {
     setPicked({ kind: 'custom', food });
-    setQuantity(food.ref_quantity_g);
+    applyUnitDefault(food.name, food.ref_quantity_g);
     setOpen(false);
   }
 
   function selectOff(food: OffResult) {
     setPicked({ kind: 'off', food });
-    setQuantity(100);
+    applyUnitDefault(food.name, 100);
     setOpen(false);
   }
 
@@ -106,10 +122,13 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
     }
   }
 
+  const matchedUnit = picked ? findUnitPreset(picked.food.name) : null;
+  const effectiveQuantity = unitMode === 'unit' && matchedUnit ? unitCount * matchedUnit.grams : quantity;
+
   function preview() {
     if (!picked) return null;
     if (picked.kind === 'custom') {
-      const factor = quantity / picked.food.ref_quantity_g;
+      const factor = effectiveQuantity / picked.food.ref_quantity_g;
       return {
         protein: Math.round(picked.food.protein_g * factor * 10) / 10,
         calories: picked.food.calories_kcal ? Math.round(picked.food.calories_kcal * factor) : null,
@@ -117,7 +136,7 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
         fat: picked.food.fat_g ? Math.round(picked.food.fat_g * factor * 10) / 10 : null,
       };
     }
-    const factor = quantity / 100;
+    const factor = effectiveQuantity / 100;
     return {
       protein: Math.round(picked.food.protein_100g * factor * 10) / 10,
       calories: picked.food.calories_100g ? Math.round(picked.food.calories_100g * factor) : null,
@@ -127,7 +146,7 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
   }
 
   async function confirmAdd() {
-    if (!picked || quantity <= 0) return;
+    if (!picked || effectiveQuantity <= 0) return;
     const p = preview();
     if (!p) return;
     setSaving(true);
@@ -137,7 +156,7 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
       date,
       meal,
       name,
-      quantity_g: quantity,
+      quantity_g: effectiveQuantity,
       protein_g: p.protein,
       calories_kcal: p.calories,
       carbs_g: p.carbs,
@@ -148,6 +167,8 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
     setPicked(null);
     setQuery('');
     setQuantity(100);
+    setUnitMode('grams');
+    setUnitCount(1);
     onAdded();
   }
 
@@ -176,15 +197,55 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
     return (
       <div className="bg-[#0a0a0a] border border-[#262626] rounded-lg p-3 space-y-2">
         <div className="flex justify-between items-start gap-2">
-          <div className="font-medium text-sm">{picked.kind === 'custom' ? picked.food.name : picked.food.name}</div>
+          <div className="flex items-center gap-2 min-w-0">
+            {picked.kind === 'off' && picked.food.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={picked.food.image_url} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
+            )}
+            <div className="font-medium text-sm truncate">{picked.food.name}</div>
+          </div>
           <button onClick={() => setPicked(null)} className="text-xs text-neutral-500 shrink-0">
             Annuler
           </button>
         </div>
-        <label className="text-xs text-neutral-500">Quantité (g)</label>
-        <input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} min={1} />
+        {matchedUnit && (
+          <div className="flex gap-1 p-0.5 rounded-lg bg-[#141414] border border-[#262626] w-fit">
+            <button
+              type="button"
+              onClick={() => setUnitMode('unit')}
+              className={`text-[11px] px-2 py-1 rounded-md font-medium capitalize transition-colors ${
+                unitMode === 'unit' ? 'bg-accent text-white' : 'text-neutral-400'
+              }`}
+            >
+              {matchedUnit.label}
+            </button>
+            <button
+              type="button"
+              onClick={() => setUnitMode('grams')}
+              className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
+                unitMode === 'grams' ? 'bg-accent text-white' : 'text-neutral-400'
+              }`}
+            >
+              Grammes
+            </button>
+          </div>
+        )}
+        {unitMode === 'unit' && matchedUnit ? (
+          <>
+            <label className="text-xs text-neutral-500">
+              Nombre de {matchedUnit.label}{unitCount > 1 ? 's' : ''} (~{matchedUnit.grams}g/{matchedUnit.label})
+            </label>
+            <input type="number" value={unitCount} onChange={(e) => setUnitCount(Number(e.target.value))} min={0.5} step={0.5} />
+          </>
+        ) : (
+          <>
+            <label className="text-xs text-neutral-500">Quantité (g)</label>
+            <input type="number" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} min={1} />
+          </>
+        )}
         <div className="text-xs text-accent">
-          = {p.protein}g protéines{p.calories ? ` · ${p.calories} kcal` : ''}
+          {unitMode === 'unit' && matchedUnit ? `${effectiveQuantity}g — ` : ''}
+          {p.protein}g protéines{p.calories ? ` · ${p.calories} kcal` : ''}
           {p.carbs ? ` · ${p.carbs}g glucides` : ''}
           {p.fat ? ` · ${p.fat}g lipides` : ''}
         </div>
@@ -251,13 +312,19 @@ export default function FoodPicker({ date, meal, customFoods, onAdded }: FoodPic
                     key={i}
                     type="button"
                     onMouseDown={() => selectOff(r)}
-                    className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex justify-between items-center gap-3"
+                    className="w-full text-left px-3 py-2 hover:bg-[#1f1f1f] flex items-center gap-3"
                   >
-                    <span>
+                    {r.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.image_url} alt="" className="w-8 h-8 rounded object-cover shrink-0 bg-[#0a0a0a]" />
+                    ) : (
+                      <div className="w-8 h-8 rounded shrink-0 bg-[#0a0a0a] border border-[#262626]" />
+                    )}
+                    <span className="flex-1 min-w-0 truncate">
                       {r.name}
                       {r.brand ? <span className="text-neutral-500"> — {r.brand}</span> : ''}
                     </span>
-                    <span className="text-xs text-accent shrink-0">{r.protein_100g}g/100g</span>
+                    <span className="text-xs text-accent shrink-0">{r.protein_100g}g prot/100g</span>
                   </button>
                 ))}
               </div>
