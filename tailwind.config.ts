@@ -5,11 +5,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Violet = couleur principale (boutons, liens, états actifs, progression)
-        accent: '#8B5CF6',
-        'accent-dark': '#7C3AED',
-        'accent-light': '#A78BFA',
-        // Vert lime = accent ponctuel (records, succès, moments à mettre en avant)
+        // Violet = couleur principale (boutons, liens, états actifs, progression).
+        // Basé sur des variables CSS (voir app/globals.css :root) plutôt que
+        // des valeurs fixes, pour pouvoir être recoloré temporairement par un
+        // événement thématique (components/ThemeEvent.tsx) sans redéploiement.
+        accent: 'rgb(var(--accent-rgb) / <alpha-value>)',
+        'accent-dark': 'rgb(var(--accent-dark-rgb) / <alpha-value>)',
+        'accent-light': 'rgb(var(--accent-light-rgb) / <alpha-value>)',
+        // Vert lime = accent ponctuel (records, succès, moments à mettre en avant), jamais recoloré.
         volt: '#A3E635',
       },
     },

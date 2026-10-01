@@ -45,6 +45,19 @@ export interface Run {
   created_at: string;
 }
 
+export interface AppEvent {
+  id: string;
+  title: string;
+  body: string;
+  emoji: string | null;
+  theme_accent: string | null;
+  theme_accent_dark: string | null;
+  theme_accent_light: string | null;
+  starts_at: string;
+  ends_at: string;
+  created_at: string;
+}
+
 export interface ProgressPhoto {
   id: string;
   date: string;

@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Couleur d'accent principale, en "r g b" (sans virgules) pour pouvoir
+     être utilisée avec les opacités Tailwind (rgb(var(--accent-rgb) / 10%)).
+     Surchargée dynamiquement par components/ThemeEvent.tsx pendant un
+     événement thématique (ex: rose pour Octobre Rose). */
+  --accent-rgb: 139 92 246;
+  --accent-dark-rgb: 124 58 237;
+  --accent-light-rgb: 167 139 250;
+}
+
 body {
   background-color: #0a0a0b;
   color: #f2f2f3;
@@ -16,7 +26,7 @@ body {
 }
 
 .btn-primary {
-  background-color: #8B5CF6;
+  background-color: rgb(var(--accent-rgb));
   color: #ffffff;
   font-weight: 600;
   padding: 0.65rem 1.2rem;
@@ -25,7 +35,7 @@ body {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #7C3AED;
+  background-color: rgb(var(--accent-dark-rgb));
 }
 
 .btn-primary:active:not(:disabled) {
@@ -66,7 +76,7 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: #8B5CF6;
+  border-color: rgb(var(--accent-rgb));
 }
 
 @keyframes wave {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Calendar, Footprints, Image as ImageIcon, LogOut, Settings, Target, TrendingUp } from 'lucide-react';
+import { Bell, Calendar, Footprints, Image as ImageIcon, LogOut, Megaphone, Settings, Target, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/AuthProvider';
 import { signOutAndClear } from '@/lib/auth';
@@ -22,6 +22,7 @@ const SECTIONS = [
   { href: '/objectifs', label: 'Objectifs', icon: Target },
   { href: '/pas', label: 'Pas', icon: Footprints },
   { href: '/photos', label: 'Photos', icon: ImageIcon },
+  { href: '/actualites', label: 'Actualités', icon: Megaphone },
   { href: '/stats', label: 'Stats', icon: TrendingUp },
   { href: '/parametres', label: 'Paramètres', icon: Settings },
 ];

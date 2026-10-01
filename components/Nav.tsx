@@ -43,6 +43,7 @@ export default function Nav() {
   const [pendingChallenges, setPendingChallenges] = useState(0);
   const [profile, setProfile] = useState<{ pseudo: string | null; avatar_url: string | null } | null>(null);
   const [offlineCount, setOfflineCount] = useState(0);
+  const [hasUnseenNews, setHasUnseenNews] = useState(false);
 
   useEffect(() => {
     const update = () => setOfflineCount(getQueue().length);
@@ -72,6 +73,20 @@ export default function Nav() {
       .select('pseudo, avatar_url')
       .maybeSingle()
       .then(({ data }) => setProfile(data));
+  }, [user, pathname]);
+
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([
+      supabase.from('profile').select('news_last_seen_at').maybeSingle(),
+      supabase.from('app_events').select('created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ]).then(([{ data: pr }, { data: latest }]) => {
+      if (!latest) {
+        setHasUnseenNews(false);
+        return;
+      }
+      setHasUnseenNews(!pr?.news_last_seen_at || new Date(latest.created_at) > new Date(pr.news_last_seen_at));
+    });
   }, [user, pathname]);
 
   const avatarLabel = profile?.pseudo ?? user?.email ?? null;
@@ -139,8 +154,11 @@ export default function Nav() {
           </button>
 
           {/* Mobile : avatar -> /profil, hub pour Calendrier/Objectifs/Stats/Paramètres. */}
-          <Link href="/profil" className="md:hidden ml-auto" aria-label="Profil">
+          <Link href="/profil" className="relative md:hidden ml-auto" aria-label="Profil">
             <Avatar url={profile?.avatar_url} label={avatarLabel} size={32} className="border border-[#26262a]" />
+            {hasUnseenNews && (
+              <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent border-2 border-[#0a0a0b]" />
+            )}
           </Link>
         </div>
       </div>
